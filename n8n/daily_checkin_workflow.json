@@ -1,0 +1,77 @@
+{
+  "name": "Nexus Daily Check-in",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "34fd4037-0793-4657-9af6-9111b8744c35",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=raghavan.lakshmis@gmail.com",
+        "toEmail": "raghavan.lakshmis@gmail.com",
+        "subject": "Nexus trigger failed",
+        "emailFormat": "text",
+        "text": "Daily check-in trigger failed. Please check your Streamlit app.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        288,
+        0
+      ],
+      "id": "1af98e99-d46a-49f8-99e9-e1c21cd8b145",
+      "name": "Send an Email",
+      "webhookId": "cb54e3c4-8ead-419f-b507-6f0b72ba4d0b",
+      "credentials": {
+        "smtp": {
+          "id": "zB1nkBV1WeKupRnB",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a44d6078-932f-40da-bf3a-96d22229e6bc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2725cd581a49ace3f1edaa2245155b8fbf1e46ddc50f7e187d8aae177f71f42a"
+  },
+  "nodeGroups": [],
+  "id": "EwJ17Jw7gpxOMGrs",
+  "tags": []
+}
