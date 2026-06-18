@@ -3,6 +3,8 @@ from tools.pdf_parser import parse_discharge_pdf
 from tools.pinecone_store import store_discharge_summary
 import json
 import os
+import uuid
+from datetime import datetime
 
 client = Anthropic()
 
@@ -60,12 +62,18 @@ def run_intake_agent(state: dict) -> dict:
             }]
         )
 
-        extracted_text = response.content[0].text
+        extracted_text = response.content[0].text.strip()
+        # Strip markdown code fences if Claude wrapped the JSON
+        if extracted_text.startswith("```"):
+            extracted_text = extracted_text.split("```")[1]
+            if extracted_text.startswith("json"):
+                extracted_text = extracted_text[4:]
+        extracted_text = extracted_text.strip()
         extracted = json.loads(extracted_text)
 
     except json.JSONDecodeError as e:
-        state["active_flags"].append(f"INTAKE_JSON_PARSE_FAILED: {str(e)}")
-        print(f"[Intake Agent] JSON parse error: {e}")
+        raw = response.content[0].text if response else "no response"
+        state["active_flags"].append(f"INTAKE_JSON_PARSE_FAILED: {str(e)} | RAW: {raw[:300]}")
         return state
     except Exception as e:
         state["active_flags"].append(f"INTAKE_CLAUDE_CALL_FAILED: {str(e)}")
@@ -104,9 +112,8 @@ def run_intake_agent(state: dict) -> dict:
     state["current_agent"] = "care_plan_agent"
 
     # Auto-populate hospitalization history from this discharge
-    import uuid as uuid_lib
     hosp_record = {
-        "id": str(uuid_lib.uuid4()),
+        "id": str(uuid.uuid4()),
         "admit_date": extracted.get("admit_date", "Unknown"),
         "discharge_date": state["discharge_date"],
         "hospital_name": extracted.get("hospital_name", "Unknown hospital"),

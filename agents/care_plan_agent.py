@@ -92,8 +92,12 @@ def run_care_plan_agent(state: dict) -> dict:
             }]
         )
 
-        care_plan_text = response.content[0].text
-        care_plan = json.loads(care_plan_text)
+        care_plan_text = response.content[0].text.strip()
+        if care_plan_text.startswith("```"):
+            care_plan_text = care_plan_text.split("```")[1]
+            if care_plan_text.startswith("json"):
+                care_plan_text = care_plan_text[4:]
+        care_plan = json.loads(care_plan_text.strip())
 
     except Exception as e:
         state["active_flags"].append(f"CARE_PLAN_GENERATION_FAILED: {str(e)}")
@@ -124,7 +128,7 @@ def run_care_plan_via_nebius(state: dict) -> str:
 
     try:
         response = nebius_client.chat.completions.create(
-            model="meta-llama/Meta-Llama-3.1-70B-Instruct",
+            model="meta-llama/Meta-Llama-3.1-70B-Instruct-fast",
             messages=[
                 {"role": "system", "content": CARE_PLAN_SYSTEM_PROMPT},
                 {"role": "user", "content": f"Generate care plan for: {state['diagnosis']}"}

@@ -40,12 +40,14 @@ def generate_checkin_questions(state: dict) -> list:
 
     questions = []
 
-    # Universal questions
-    questions.append({
-        "id": "medications",
-        "question": f"Did you take all your medications today? ({', '.join(meds[:3])}{'...' if len(meds) > 3 else ''})",
-        "type": "yes_no_detail"
-    })
+    # Individual medication questions
+    for med in meds:
+        questions.append({
+            "id": f"med_{med.replace(' ', '_').lower()}",
+            "question": f"Did you take {med} today?",
+            "type": "med_checkbox",
+            "med_name": med
+        })
 
     questions.append({
         "id": "general_feeling",
@@ -116,7 +118,12 @@ def run_monitoring_agent(state: dict, check_in_responses: dict) -> dict:
             }]
         )
 
-        result = json.loads(response.content[0].text)
+        result_text = response.content[0].text.strip()
+        if result_text.startswith("```"):
+            result_text = result_text.split("```")[1]
+            if result_text.startswith("json"):
+                result_text = result_text[4:]
+        result = json.loads(result_text.strip())
 
     except Exception as e:
         # Safe fallback — treat as YELLOW on classification error
