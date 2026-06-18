@@ -5,3 +5,12 @@ __pycache__/
 .DS_Store
 credentials.json
 *.pdf
+*.wav
+*.docx
+*.xlsx
+generate_docs.py
+test_stt.py
+data/convert.py
+data/create_test_pdf.py
+*~touch
+~$*
