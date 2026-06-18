@@ -6,8 +6,9 @@ import uuid
 import os
 from datetime import datetime
 from openai import OpenAI
+from dotenv import load_dotenv
 
-client = Anthropic()
+load_dotenv(override=True)
 
 CARE_PLAN_SYSTEM_PROMPT = """You are a patient care coordinator creating a recovery plan.
 Your audience is the patient and their family — NOT clinicians.
@@ -35,6 +36,7 @@ def run_care_plan_agent(state: dict) -> dict:
     Care Plan Agent: Check medication interactions, generate plain-language care plan.
     Returns updated state.
     """
+    client = Anthropic()
     print("[Care Plan Agent] Starting...")
 
     # Step 1: Check medication interactions via OpenFDA
@@ -81,6 +83,7 @@ def run_care_plan_agent(state: dict) -> dict:
                     "status": "pending",
                     "created_at": datetime.now().isoformat()
                 }
+                state["human_approval_queue"].append(approval_item)
 
             # Mark flagged medications in state
             for med in state["medications"]:

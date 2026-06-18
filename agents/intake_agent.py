@@ -5,8 +5,9 @@ import json
 import os
 import uuid
 from datetime import datetime
+from dotenv import load_dotenv
 
-client = Anthropic()
+load_dotenv(override=True)
 
 INTAKE_SYSTEM_PROMPT = """You are a medical document intake specialist. 
 Your job is to extract structured information from hospital discharge summaries.
@@ -36,6 +37,7 @@ def run_intake_agent(state: dict) -> dict:
     Intake Agent: Parse discharge PDF, extract structured data, store in Pinecone.
     Returns updated state.
     """
+    client = Anthropic()
     print("[Intake Agent] Starting...")
 
     # Step 1: Parse PDF

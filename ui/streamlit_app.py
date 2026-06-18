@@ -7,7 +7,12 @@ from datetime import datetime, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)
+
+# Point pydub at ffmpeg when it isn't on PATH (e.g. fresh winget install)
+_FFMPEG_BIN = r"C:\Users\laksh\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1.1-full_build\bin"
+if os.path.isdir(_FFMPEG_BIN):
+    os.environ["PATH"] = _FFMPEG_BIN + os.pathsep + os.environ.get("PATH", "")
 
 from agents.orchestrator import intake_graph, monitoring_graph, build_monitoring_graph
 from agents.monitoring_agent import generate_checkin_questions
@@ -306,13 +311,13 @@ elif st.session_state.page == "historical_checkin":
         st.title("Log a Past Day")
 
         available_dates = [d for _, d in available]
-        default_date = available_dates[0]
+        default_date = available_dates[-1]  # default to most recent unlogged day
 
         selected_date = st.date_input(
             "Which day are you logging?",
             value=default_date,
-            min_value=available_dates[-1] if available_dates else default_date,
-            max_value=available_dates[0] if available_dates else default_date,
+            min_value=available_dates[0],   # earliest available
+            max_value=available_dates[-1],  # latest available (yesterday)
         )
 
         # Compute day number from selected date
@@ -663,6 +668,12 @@ elif st.session_state.page == "checkin":
                     st.session_state.show_typed_form = True
 
         except ImportError:
+            st.session_state.show_typed_form = True
+        except FileNotFoundError:
+            st.warning("⚠️ Voice recording requires ffmpeg, which isn't installed on this machine. Please type your responses below.")
+            st.session_state.show_typed_form = True
+        except Exception as e:
+            st.warning(f"⚠️ Voice recording unavailable: {e}. Please type your responses below.")
             st.session_state.show_typed_form = True
 
         # ── TYPED FALLBACK ───────────────────────────────────────────────────

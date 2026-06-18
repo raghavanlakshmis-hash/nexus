@@ -1,10 +1,11 @@
 from anthropic import Anthropic
 from tools.pinecone_store import store_check_in, retrieve_patient_history
+from dotenv import load_dotenv
 import json
 import re
 from datetime import datetime
 
-client = Anthropic()
+load_dotenv(override=True)
 
 MONITORING_SYSTEM_PROMPT = """You are a recovery monitoring specialist.
 You will receive a patient's daily check-in responses and their recovery context.
@@ -95,6 +96,7 @@ def run_monitoring_agent(state: dict, check_in_responses: dict) -> dict:
     """
     Monitoring Agent: Classify daily check-in, update history, return updated state.
     """
+    client = Anthropic()
     print(f"[Monitoring Agent] Processing Day {state['recovery_day']} check-in...")
 
     # Retrieve recent history for trend analysis

@@ -84,53 +84,82 @@ def parse_transcript_to_responses(transcript: str, questions: list, state: dict)
     """
     Use Claude to parse a free-form spoken transcript into
     structured check-in responses matching the question set.
-
-    Args:
-        transcript: Raw text from ElevenLabs STT
-        questions: List of check-in question dicts from generate_checkin_questions()
-        state: Current recovery state (for context)
-
-    Returns:
-        Dict of structured responses keyed by question ID
     """
     from anthropic import Anthropic
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
     client = Anthropic()
 
-    question_summary = "\n".join([
-        f"- {q['id']}: {q['question']}" for q in questions
-    ])
+    import json
 
-    system_prompt = """You are parsing a patient's spoken check-in response into structured data.
-The patient spoke freely — your job is to extract answers to specific questions from their speech.
-Be generous in interpretation. If they mention a symptom, flag it.
-Return ONLY valid JSON with one key per question ID.
-If the transcript doesn't address a question, set that key to null."""
+    # Build a type-aware schema so Claude knows exactly what values to return
+    schema_lines = []
+    for q in questions:
+        qtype = q.get("type", "free_text")
+        if qtype == "med_checkbox":
+            schema_lines.append(
+                f'  "{q["id"]}": '
+                f'// Did the patient take {q.get("med_name", q["id"])}? '
+                f'Return "Yes — I took it" | "No — I missed it" | null'
+            )
+        elif qtype == "scale_1_10":
+            schema_lines.append(
+                f'  "{q["id"]}": '
+                f'// {q["question"]} Return an integer 1-10. '
+                f'Convert words to numbers ("four"→4, "seven"→7). Return null if not mentioned.'
+            )
+        elif qtype == "number_lbs":
+            schema_lines.append(
+                f'  "{q["id"]}": '
+                f'// {q["question"]} Return a number (lbs) or null.'
+            )
+        elif qtype == "yes_no_detail":
+            schema_lines.append(
+                f'  "{q["id"]}": '
+                f'// {q["question"]} Return "Yes" | "No" | null. '
+                f'Also add "{q["id"]}_detail" key with any detail they gave, or null.'
+            )
+        else:
+            schema_lines.append(
+                f'  "{q["id"]}": // {q["question"]} Return the patient\'s answer as a string or null.'
+            )
+
+    schema_str = "{\n" + "\n".join(schema_lines) + "\n}"
+
+    prompt = f"""A patient just finished their spoken daily check-in (Day {state.get('recovery_day', 1)}, recovering from {state.get('diagnosis', 'their condition')}).
+
+Their exact words: "{transcript}"
+
+Extract their answers and return ONLY this JSON object — no explanation, no markdown:
+{schema_str}
+
+Rules:
+- For medications: if they say "I took [med]" → "Yes — I took it". If they say "I missed" or don't mention it at all → null (not "No — I missed it", leave it null so they can confirm).
+- For energy/feeling numbers: convert spoken words to integers ("four" → 4, "seven and a half" → 8).
+- For yes/no questions: "no symptoms" or "I don't have any" counts as "No".
+- Only return "No — I missed it" if they explicitly say they missed or skipped a medication.
+- Return null for anything genuinely not mentioned."""
 
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=500,
-            system=system_prompt,
-            messages=[{
-                "role": "user",
-                "content": f"""Patient's spoken check-in (Day {state.get('recovery_day', 1)} of recovery from {state.get('diagnosis', 'unknown')}):
-
-"{transcript}"
-
-Extract answers for these questions:
-{question_summary}
-
-Return JSON with these exact keys: {[q['id'] for q in questions]}"""
-            }]
+            max_tokens=800,
+            messages=[{"role": "user", "content": prompt}]
         )
 
-        import json
-        return json.loads(response.content[0].text)
+        raw = response.content[0].text.strip()
+        # Strip markdown fences if present
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
 
+        return json.loads(raw)
+
+    except json.JSONDecodeError as e:
+        print(f"[STT parse] JSON decode failed: {e} | raw: {raw[:200]}")
+        return {"concerns": transcript}
     except Exception as e:
-        # Fallback: return transcript as free_text answer
-        return {
-            "concerns": transcript,
-            "_parse_error": str(e),
-            "_raw_transcript": transcript
-        }
+        print(f"[STT parse] Claude call failed: {e}")
+        return {"concerns": transcript}
