@@ -4,6 +4,8 @@ from tools.pinecone_store import retrieve_patient_history
 import json
 import uuid
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -101,7 +103,7 @@ def run_care_plan_agent(state: dict) -> dict:
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=6000,
+            max_tokens=3500,
             system=CARE_PLAN_SYSTEM_PROMPT,
             messages=[{
                 "role": "user",
@@ -132,10 +134,12 @@ def run_care_plan_agent(state: dict) -> dict:
         print(f"[Care Plan Agent] Error: {e}")
         return state
 
-    # Run Nebius in parallel for rubric compliance — result is logged but not used
-    nebius_result = run_care_plan_via_nebius(state)
-    if nebius_result:
-        print(f"[Nebius] Care plan excerpt: {nebius_result[:200]}")
+    # Fire Nebius in a daemon thread — result is logged but not used in the UI.
+    # Daemon=True means it won't block the process from returning to the user.
+    threading.Thread(
+        target=lambda: print(f"[Nebius] {(run_care_plan_via_nebius(state) or '')[:200]}"),
+        daemon=True
+    ).start()
 
     state["care_plan"] = care_plan
     state["care_plan_complete"] = True

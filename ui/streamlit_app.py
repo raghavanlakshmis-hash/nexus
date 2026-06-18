@@ -19,173 +19,641 @@ from agents.monitoring_agent import generate_checkin_questions
 
 st.set_page_config(
     page_title="Nexus",
-    page_icon="💜",
+    page_icon="🌿",
     layout="wide"
 )
 
 st.markdown("""
 <style>
-/* ── SIDEBAR — dark navy gradient ────────────────────────────────────────── */
-[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #12112A 0%, #2D2A6E 100%) !important;
+/* ══════════════════════════════════════════════════════════════
+   NEXUS  ·  Warm Clinical Edition
+   Palette adapted from "Modern Lifestyle Store" design
+   Cream #FBF8EF · Sage #A3B18A · Deep Sage #8A9A6B
+   Taupe #E7E0D4  · Ink  #2B2B26 · Clay #B08A6E
+   Fonts: Playfair Display (headings) + Mulish (body/UI)
+══════════════════════════════════════════════════════════════ */
+
+/* ── FONTS ───────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Mulish:wght@300;400;500;600;700;800&display=swap');
+
+/* ── DESIGN TOKENS ───────────────────────────────────────────── */
+:root {
+  --c-bg:       #FBF8EF;
+  --c-surface:  #FFFFFF;
+  --c-border:   #E7E0D4;
+  --c-taupe:    #E7E0D4;
+  --c-taupe-dk: #CFC4B4;
+  --c-ink:      #2B2B26;
+  --c-sage:     #A3B18A;
+  --c-sage-dk:  #8A9A6B;
+  --c-sage-lt:  #EFF3E9;
+  --c-clay:     #B08A6E;
+  --c-clay-lt:  #F7EEE6;
+  --c-text:     #2B2B26;
+  --c-text-2:   #5A5750;
+  --c-text-3:   #9A938A;
+  --r-card:     16px;
+  --r-btn:      999px;
+  --shadow-sm:  0 1px 3px rgba(43,43,38,0.06), 0 4px 16px rgba(43,43,38,0.04);
+  --shadow-md:  0 4px 24px rgba(43,43,38,0.10), 0 1px 4px rgba(43,43,38,0.05);
 }
-[data-testid="stSidebar"] .stMarkdown,
+
+/* ── GLOBAL BASE ─────────────────────────────────────────────── */
+html, body, .stApp {
+    font-family: 'Mulish', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    background-color: var(--c-bg) !important;
+    color: var(--c-text) !important;
+    -webkit-font-smoothing: antialiased;
+}
+.stApp { background: var(--c-bg) !important; }
+
+/* ── MAIN CONTENT CONTAINER ──────────────────────────────────── */
+.block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 4rem !important;
+    max-width: 1080px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 2.25rem !important;
+    padding-right: 2.25rem !important;
+}
+
+/* ── TYPOGRAPHY ──────────────────────────────────────────────── */
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stHeadingWithActionElements"] h1 {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-size: 2.1rem !important;
+    font-weight: 700 !important;
+    color: var(--c-ink) !important;
+    letter-spacing: -0.2px !important;
+    line-height: 1.25 !important;
+}
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stHeadingWithActionElements"] h2 {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-size: 1.4rem !important;
+    font-weight: 600 !important;
+    color: var(--c-ink) !important;
+    margin-top: 2rem !important;
+    letter-spacing: -0.1px !important;
+}
+[data-testid="stMarkdownContainer"] h3,
+[data-testid="stHeadingWithActionElements"] h3 {
+    font-family: 'Mulish', sans-serif !important;
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    color: var(--c-sage-dk) !important;
+}
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
+.stMarkdown p {
+    font-size: 1.05rem !important;
+    color: var(--c-text) !important;
+    line-height: 1.72 !important;
+    font-family: 'Mulish', sans-serif !important;
+}
+[data-testid="stMarkdownContainer"] strong { color: var(--c-ink) !important; }
+[data-testid="stMain"] label,
+[data-testid="stForm"] label {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: var(--c-ink) !important;
+    font-family: 'Mulish', sans-serif !important;
+}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(170deg, #1A1A16 0%, #2B2B26 100%) !important;
+    border-right: none !important;
+    min-width: 268px !important;
+    box-shadow: 4px 0 28px rgba(43,43,38,0.22) !important;
+}
+[data-testid="stSidebar"] > div:first-child {
+    padding-top: 1.5rem !important;
+}
+[data-testid="stSidebar"] div,
 [data-testid="stSidebar"] p,
-[data-testid="stSidebar"] span,
-[data-testid="stSidebar"] label { color: #E8E6F5 !important; }
-[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.12) !important; }
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] small,
+[data-testid="stSidebar"] strong,
+[data-testid="stSidebar"] em,
+[data-testid="stSidebar"] .stMarkdown,
+[data-testid="stSidebar"] .stMarkdown * {
+    color: #EDE8DA !important;
+    font-size: 1rem !important;
+    font-family: 'Mulish', sans-serif !important;
+}
+/* Restore Material Symbols font for sidebar icon buttons (collapse/expand toggle) */
+[data-testid="stSidebar"] button span,
+[data-testid="stSidebarCollapsedControl"] span,
+[data-testid="collapsedControl"] span {
+    font-family: inherit !important;
+    font-size: inherit !important;
+    color: inherit !important;
+}
+[data-testid="stSidebar"] hr {
+    border-color: rgba(255,255,255,0.08) !important;
+    margin: 1rem 0 !important;
+}
 [data-testid="stSidebar"] .stButton > button {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    color: rgba(255,255,255,0.82) !important;
-    border-radius: 8px !important;
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
+    color: #EDE8DA !important;
+    border-radius: 10px !important;
+    font-size: 1rem !important;
     font-weight: 500 !important;
-    font-size: 0.9rem !important;
+    font-family: 'Mulish', sans-serif !important;
+    padding: 0.75rem 1.1rem !important;
+    min-height: 52px !important;
     text-align: left !important;
-    margin-bottom: 3px !important;
-    transition: all 0.15s ease !important;
+    margin-bottom: 6px !important;
+    transition: background 0.15s, border-color 0.15s, color 0.15s !important;
+    width: 100% !important;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
-    background: rgba(127,119,221,0.35) !important;
-    border-color: #7F77DD !important;
-    color: white !important;
-    transform: translateX(2px) !important;
+    background: rgba(163,177,138,0.20) !important;
+    border-color: rgba(163,177,138,0.40) !important;
+    color: #FFFFFF !important;
 }
-[data-testid="stSidebar"] [data-testid="stMetricValue"] { color: white !important; font-weight: 700 !important; }
-[data-testid="stSidebar"] [data-testid="stMetricLabel"] { color: rgba(255,255,255,0.55) !important; font-size: 10px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; }
-[data-testid="stSidebar"] [data-testid="stMetricDeltaIcon-Up"],
-[data-testid="stSidebar"] [data-testid="stMetricDeltaIcon-Down"] { color: rgba(255,255,255,0.5) !important; }
-[data-testid="stSidebar"] .stWarning { background: rgba(251,191,36,0.15) !important; border-radius: 8px; }
+[data-testid="stSidebar"] [data-testid="stMetricValue"] {
+    color: #FBF8EF !important;
+    font-weight: 700 !important;
+    font-size: 1.35rem !important;
+}
+[data-testid="stSidebar"] [data-testid="stMetricLabel"] {
+    color: rgba(237,232,218,0.55) !important;
+    font-size: 0.78rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.7px !important;
+}
+[data-testid="stSidebar"] .stWarning {
+    background: rgba(176,138,110,0.18) !important;
+    border-radius: 10px !important;
+}
 
-/* ── MAIN CONTENT ────────────────────────────────────────────────────────── */
-.block-container { padding-top: 1.25rem !important; max-width: 1050px !important; }
+/* ── INTERACTIVE ELEMENTS — all sage, zero purple/blue ──────── */
 
-/* ── BUTTONS ─────────────────────────────────────────────────────────────── */
+/* 1. Native accent-color — covers any hidden <input> BaseUI wraps */
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--c-sage-dk) !important;
+}
+
+/* 2. Checkboxes — Streamlit wraps in [data-testid="stCheckbox"], not just BaseUI */
+[data-testid="stCheckbox"] input[type="checkbox"],
+[data-baseweb="checkbox"] input[type="checkbox"] {
+    accent-color: var(--c-sage-dk) !important;
+    width: 18px !important;
+    height: 18px !important;
+}
+/* Unchecked border */
+[data-testid="stCheckbox"] [role="checkbox"],
+[data-baseweb="checkbox"] [role="checkbox"] {
+    border-color: var(--c-taupe-dk) !important;
+    border-radius: 4px !important;
+}
+/* Checked fill — all selector variants across Streamlit versions */
+[data-testid="stCheckbox"] [role="checkbox"][aria-checked="true"],
+[data-testid="stCheckbox"] [aria-checked="true"],
+[data-testid="stCheckbox"] [aria-checked="true"] > div,
+[data-testid="stCheckbox"] [aria-checked="true"] > span,
+[data-baseweb="checkbox"] [role="checkbox"][aria-checked="true"],
+[data-baseweb="checkbox"] [aria-checked="true"],
+[data-baseweb="checkbox"] [aria-checked="true"] > div,
+[data-baseweb="checkbox"] [aria-checked="true"] > span {
+    background-color: var(--c-sage-dk) !important;
+    border-color: var(--c-sage-dk) !important;
+}
+
+/* 3. Radio buttons — checked fill */
+[data-baseweb="radio"] [role="radio"][aria-checked="true"] > div,
+[data-baseweb="radio"] [aria-checked="true"] > div:first-child,
+[data-baseweb="radio"] [aria-checked="true"] > div {
+    background: var(--c-sage-dk) !important;
+    border-color: var(--c-sage-dk) !important;
+}
+
+/* 4. Slider — thumb and filled track */
+[data-testid="stSlider"] [role="slider"],
+[data-baseweb="slider"] [role="slider"] {
+    background: var(--c-sage-dk) !important;
+    border-color: var(--c-sage-dk) !important;
+}
+[data-testid="stSlider"] > div > div > div > div,
+[data-baseweb="slider"] div[class*="Fill"],
+[data-baseweb="slider"] > div > div > div:nth-child(2) {
+    background: var(--c-sage-dk) !important;
+}
+
+/* 5. Multiselect tags */
+[data-baseweb="tag"] {
+    background: var(--c-sage-lt) !important;
+    border-color: rgba(163,177,138,0.4) !important;
+    border-radius: 999px !important;
+}
+[data-baseweb="tag"] span { color: var(--c-sage-dk) !important; }
+[data-baseweb="tag"] [role="button"] { color: var(--c-sage-dk) !important; }
+
+/* 6. Select / dropdown — highlighted option */
+[data-baseweb="menu"] li[aria-selected="true"],
+[data-baseweb="menu"] li:hover,
+[data-baseweb="select"] [aria-selected="true"] {
+    background: var(--c-sage-lt) !important;
+    color: var(--c-sage-dk) !important;
+}
+
+/* 7. Date-picker — full calendar override */
+/* Popup background (lavender → cream) */
+[data-baseweb="calendar"],
+[data-baseweb="calendar"] > div,
+[data-baseweb="calendar"] [role="grid"],
+[data-baseweb="calendar"] [role="grid"] > div {
+    background: var(--c-surface) !important;
+    border-color: var(--c-taupe) !important;
+}
+/* Day-name header row — subtle taupe strip */
+[data-baseweb="calendar"] [role="row"]:first-of-type {
+    background: var(--c-taupe) !important;
+}
+/* All day buttons — transparent by default */
+[data-baseweb="calendar"] button {
+    background: transparent !important;
+    color: var(--c-ink) !important;
+    border-radius: 50% !important;
+}
+/* Selected day — aria-selected is ON the button itself, not a parent */
+[data-baseweb="calendar"] button[aria-selected="true"],
+[data-baseweb="calendar"] button[data-selected="true"] {
+    background: var(--c-sage-dk) !important;
+    color: #FFFFFF !important;
+}
+/* Today — outline ring */
+[data-baseweb="calendar"] button[aria-current="date"] {
+    outline: 2px solid var(--c-sage) !important;
+    outline-offset: -2px !important;
+}
+/* Hover */
+[data-baseweb="calendar"] button:not([aria-selected="true"]):hover {
+    background: var(--c-sage-lt) !important;
+}
+/* Progress bar fill — target every nesting depth Streamlit uses */
+[data-testid="stProgressBar"] > div,
+[data-testid="stProgressBar"] div[role="progressbar"] > div,
+[data-testid="stProgressBar"] > div > div > div,
+[data-testid="stProgressBar"] [role="progressbar"] > div,
+.stProgress [role="progressbar"] > div,
+.stProgress > div > div > div {
+    background: linear-gradient(90deg, var(--c-sage), var(--c-sage-dk)) !important;
+    border-radius: 20px !important;
+}
+/* File uploader — cream background, no lavender */
+[data-testid="stFileUploaderDropzone"],
+[data-testid="stFileUploader"] > div {
+    background: var(--c-surface) !important;
+    border-color: var(--c-taupe) !important;
+    border-radius: var(--r-card) !important;
+}
+[data-testid="stFileUploaderDropzone"]:hover {
+    border-color: var(--c-sage) !important;
+    background: var(--c-sage-lt) !important;
+}
+[data-testid="stFileUploader"] button {
+    color: var(--c-sage-dk) !important;
+    border-color: var(--c-sage) !important;
+    border-radius: 999px !important;
+}
+[data-testid="stDownloadButton"] > button {
+    border-color: var(--c-sage) !important;
+    color: var(--c-sage-dk) !important;
+    border-radius: 999px !important;
+}
+a { color: var(--c-clay) !important; }
+a:hover { color: var(--c-ink) !important; }
+*:focus-visible { outline-color: var(--c-sage-dk) !important; outline-offset: 2px; }
+
+/* ── INPUTS ──────────────────────────────────────────────────── */
+/* Wrapper borders and border-radius */
+[data-baseweb="input"],
+[data-baseweb="input"] > div,
+[data-baseweb="input"] > div > div,
+[data-baseweb="textarea"],
+[data-baseweb="textarea"] > div,
+[data-testid="stTextInput"] > div,
+[data-testid="stTextInput"] > div > div,
+[data-testid="stNumberInput"] > div,
+[data-testid="stNumberInput"] > div > div,
+[data-testid="stDateInput"] > div > div {
+    border-radius: 12px !important;
+    border-color: var(--c-taupe) !important;
+    background: #FDFBF5 !important;
+    font-size: 1.02rem !important;
+    transition: border-color 0.15s !important;
+    font-family: 'Mulish', sans-serif !important;
+}
+/* Focus ring */
+[data-baseweb="input"] > div:focus-within,
+[data-baseweb="textarea"] > div:focus-within,
+[data-testid="stTextInput"] > div:focus-within {
+    border-color: var(--c-sage) !important;
+    box-shadow: 0 0 0 3px rgba(163,177,138,0.15) !important;
+}
+/* The actual <input>/<textarea> — Streamlit sets background-color inline here */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea {
+    font-size: 1.02rem !important;
+    font-family: 'Mulish', sans-serif !important;
+    color: var(--c-ink) !important;
+    background-color: #FDFBF5 !important;
+}
+/* Hide "Press Enter to submit form" tooltip — redundant when a submit button exists */
+[data-testid="InputInstructions"] { display: none !important; }
+[data-baseweb="select"] {
+    border-radius: 12px !important;
+    font-size: 1.02rem !important;
+}
+
+/* ── MAIN BUTTONS — pill-shaped, sage ────────────────────────── */
 .stButton > button {
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    border-color: #534AB7 !important;
-    color: #534AB7 !important;
-    transition: all 0.15s ease !important;
+    border-radius: 999px !important;
+    font-family: 'Mulish', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    min-height: 48px !important;
+    padding: 0.6rem 1.8rem !important;
+    border: 1.5px solid var(--c-sage) !important;
+    color: var(--c-sage-dk) !important;
+    background: var(--c-surface) !important;
+    transition: all 0.18s ease !important;
+    letter-spacing: 0.02em !important;
 }
 .stButton > button:hover {
-    background-color: #EEEDFE !important;
+    background: var(--c-sage-dk) !important;
+    color: white !important;
+    border-color: var(--c-sage-dk) !important;
+    box-shadow: 0 4px 18px rgba(138,154,107,0.30) !important;
     transform: translateY(-1px) !important;
-    box-shadow: 0 4px 14px rgba(83,74,183,0.22) !important;
 }
 
-/* ── FORM INPUTS ─────────────────────────────────────────────────────────── */
-[data-baseweb="input"] > div,
-[data-baseweb="textarea"] > div { border-radius: 8px !important; }
+/* Form submit — filled sage pill */
+[data-testid="stFormSubmitButton"] > button {
+    background: var(--c-sage-dk) !important;
+    color: white !important;
+    border: none !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    min-height: 52px !important;
+    border-radius: 999px !important;
+    font-family: 'Mulish', sans-serif !important;
+    letter-spacing: 0.03em !important;
+    box-shadow: 0 2px 12px rgba(138,154,107,0.30) !important;
+}
+[data-testid="stFormSubmitButton"] > button:hover {
+    background: #7A8B5C !important;
+    box-shadow: 0 6px 22px rgba(138,154,107,0.38) !important;
+    transform: translateY(-1px) !important;
+}
 
-/* ── TABS ────────────────────────────────────────────────────────────────── */
+/* ── TABS — pill-shaped ──────────────────────────────────────── */
 .stTabs [data-baseweb="tab-list"] {
-    background: #F4F3FE;
-    border-radius: 10px;
-    padding: 4px;
-    gap: 3px;
+    background: var(--c-taupe);
+    border-radius: 999px;
+    padding: 5px;
+    gap: 4px;
     border-bottom: none !important;
 }
-.stTabs [data-baseweb="tab"] { border-radius: 8px !important; font-weight: 500 !important; padding: 0.4rem 1rem !important; }
+.stTabs [data-baseweb="tab"] {
+    border-radius: 999px !important;
+    font-size: 0.97rem !important;
+    font-weight: 600 !important;
+    padding: 0.55rem 1.25rem !important;
+    min-height: 44px !important;
+    color: var(--c-text-2) !important;
+    font-family: 'Mulish', sans-serif !important;
+}
 .stTabs [aria-selected="true"] {
-    background: white !important;
-    box-shadow: 0 1px 4px rgba(83,74,183,0.18) !important;
-    color: #534AB7 !important;
+    background: var(--c-surface) !important;
+    box-shadow: var(--shadow-sm) !important;
+    color: var(--c-sage-dk) !important;
+    font-weight: 700 !important;
 }
 
-/* ── METRICS ─────────────────────────────────────────────────────────────── */
-[data-testid="stMetricLabel"] { color: #7F77DD !important; font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; }
-[data-testid="stMetricValue"] { color: #3C3489 !important; font-weight: 700 !important; }
+/* ── METRICS ─────────────────────────────────────────────────── */
+[data-testid="stMetricLabel"] {
+    color: var(--c-text-2) !important;
+    font-size: 0.82rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.7px !important;
+    font-weight: 700 !important;
+    font-family: 'Mulish', sans-serif !important;
+}
+[data-testid="stMetricValue"] {
+    color: var(--c-ink) !important;
+    font-weight: 700 !important;
+    font-size: 2.1rem !important;
+    font-family: 'Playfair Display', Georgia, serif !important;
+}
 
-/* ── ALERTS ──────────────────────────────────────────────────────────────── */
-[data-testid="stAlert"] { border-radius: 10px !important; border-left-width: 4px !important; }
+/* ── ALERTS ──────────────────────────────────────────────────── */
+[data-testid="stAlert"] {
+    border-radius: var(--r-card) !important;
+    border-left-width: 4px !important;
+    font-size: 1.02rem !important;
+    padding: 1.1rem 1.4rem !important;
+    line-height: 1.65 !important;
+    font-family: 'Mulish', sans-serif !important;
+}
 
-/* ── EXPANDERS ───────────────────────────────────────────────────────────── */
-[data-testid="stExpander"] { border: 1px solid #E8E6F5 !important; border-radius: 10px !important; }
-[data-testid="stExpander"]:hover { border-color: #CECBF6 !important; }
+/* ── EXPANDERS ───────────────────────────────────────────────── */
+[data-testid="stExpander"] {
+    border: 1.5px solid var(--c-border) !important;
+    border-radius: var(--r-card) !important;
+    background: var(--c-surface) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+[data-testid="stExpander"]:hover {
+    border-color: var(--c-sage) !important;
+}
 
-/* ── NEXUS PAGE HEADER ───────────────────────────────────────────────────── */
+/* ── PROGRESS BARS ───────────────────────────────────────────── */
+.stProgress > div > div { border-radius: 20px !important; }
+
+/* ── RADIO & CHECKBOX ────────────────────────────────────────── */
+[data-baseweb="radio"] label,
+[data-baseweb="checkbox"] label {
+    font-size: 1.02rem !important;
+    color: var(--c-text) !important;
+    line-height: 1.5 !important;
+    font-family: 'Mulish', sans-serif !important;
+}
+
+/* ── SLIDERS ─────────────────────────────────────────────────── */
+.stSlider { padding: 0.6rem 0 0.3rem !important; }
+
+/* ── CAPTIONS ────────────────────────────────────────────────── */
+.stCaption, [data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p {
+    font-size: 0.9rem !important;
+    color: var(--c-text-3) !important;
+    line-height: 1.6 !important;
+    font-family: 'Mulish', sans-serif !important;
+}
+
+/* ── SPINNER ─────────────────────────────────────────────────── */
+[data-testid="stSpinner"] p {
+    font-size: 1.02rem !important;
+    color: var(--c-text-2) !important;
+    font-family: 'Mulish', sans-serif !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CUSTOM COMPONENTS
+══════════════════════════════════════════════════════════════ */
+
+/* ── PAGE HEADER BAR — white card, clay+sage left accent ─────── */
 .nexus-page-header {
-    background: linear-gradient(135deg, #2D2A6E 0%, #534AB7 60%, #7F77DD 100%);
-    border-radius: 14px;
-    padding: 1.2rem 1.75rem;
-    margin-bottom: 1.75rem;
+    background: linear-gradient(120deg, #F5F1E4 0%, #FDFBF4 60%, #FFFFFF 100%);
+    border: 1.5px solid var(--c-taupe);
+    border-radius: var(--r-card);
+    padding: 1.75rem 2.25rem;
+    margin-bottom: 2rem;
     display: flex;
     align-items: center;
-    box-shadow: 0 4px 20px rgba(83,74,183,0.3);
+    gap: 1.5rem;
+    box-shadow: 0 2px 12px rgba(43,43,38,0.08), 0 1px 3px rgba(43,43,38,0.04);
+    position: relative;
+    overflow: hidden;
 }
-.nph-logo { font-size: 1.35rem; font-weight: 800; color: white; letter-spacing: -0.5px; margin: 0; line-height: 1.2; }
-.nph-sub  { font-size: 0.72rem; color: rgba(255,255,255,0.68); letter-spacing: 1.2px; text-transform: uppercase; margin: 3px 0 0 0; }
+.nexus-page-header::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 6px;
+    background: linear-gradient(180deg, var(--c-sage) 0%, var(--c-clay) 100%);
+    border-radius: 4px 0 0 4px;
+}
+.nph-logo {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--c-ink);
+    letter-spacing: -0.4px;
+    margin: 0;
+    line-height: 1.15;
+}
+.nph-sub {
+    font-size: 1rem;
+    color: var(--c-text-2);
+    letter-spacing: 0.1px;
+    margin: 6px 0 0 0;
+    font-weight: 500;
+    font-family: 'Mulish', sans-serif;
+}
 .nph-badge {
     margin-left: auto;
-    background: rgba(255,255,255,0.16);
-    border: 1px solid rgba(255,255,255,0.28);
-    border-radius: 20px;
-    padding: 5px 14px;
-    font-size: 0.82rem;
-    color: white;
-    font-weight: 500;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--c-sage-lt) 0%, #E8EEE0 100%);
+    border: 1.5px solid rgba(163,177,138,0.55);
+    border-radius: 999px;
+    padding: 12px 26px;
+    font-size: 1.05rem;
+    color: var(--c-sage-dk);
+    font-weight: 700;
     white-space: nowrap;
+    font-family: 'Mulish', sans-serif;
+    box-shadow: 0 1px 6px rgba(138,154,107,0.18);
 }
 
-/* ── ONBOARDING HERO ─────────────────────────────────────────────────────── */
+/* ── HERO / ONBOARDING BANNER — warm cream, dark ink text ────── */
 .nexus-hero {
-    background: linear-gradient(135deg, #2D2A6E 0%, #534AB7 100%);
-    border-radius: 16px;
-    padding: 2.5rem 2rem;
-    color: white;
-    margin-bottom: 2rem;
+    background: linear-gradient(150deg, #EDE7D3 0%, #FAF7ED 70%, #FBF8EF 100%);
+    border: 1.5px solid var(--c-taupe);
+    border-radius: 20px;
+    padding: 3.25rem 2.75rem;
+    margin-bottom: 2.5rem;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
 }
-.nexus-hero h1 { color: white !important; font-size: 2.2rem !important; font-weight: 800 !important; margin-bottom: 0.5rem !important; }
-.nexus-hero p  { color: rgba(255,255,255,0.82) !important; font-size: 1.05rem; line-height: 1.7; margin-bottom: 0; }
-.nexus-trust-row { display: flex; gap: 1.5rem; margin-top: 1.5rem; flex-wrap: wrap; }
-.nexus-trust-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: rgba(255,255,255,0.75); }
+.nexus-hero::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 5px;
+    background: linear-gradient(180deg, var(--c-sage), var(--c-clay));
+    border-radius: 0 20px 20px 0;
+}
+.nexus-trust-row {
+    display: flex;
+    gap: 0.65rem;
+    margin-top: 1.85rem;
+    flex-wrap: wrap;
+}
+.nexus-trust-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem !important;
+    color: var(--c-sage-dk) !important;
+    font-weight: 700;
+    background: var(--c-sage-lt);
+    border: 1px solid rgba(163,177,138,0.45);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-family: 'Mulish', sans-serif;
+}
 
-/* ── CLINICAL CARD ───────────────────────────────────────────────────────── */
+/* ── INFO CARD ───────────────────────────────────────────────── */
 .clinical-card {
-    background: white;
-    border: 1px solid #E8E6F5;
-    border-radius: 12px;
-    padding: 1.4rem 1.6rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 1px 4px rgba(83,74,183,0.07);
+    background: var(--c-surface);
+    border: 1.5px solid var(--c-border);
+    border-radius: var(--r-card);
+    padding: 1.6rem 1.85rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--shadow-sm);
 }
 .card-section-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #7F77DD;
+    font-size: 0.73rem;
+    font-weight: 800;
+    color: var(--c-clay);
     text-transform: uppercase;
-    letter-spacing: 1.1px;
-    margin-bottom: 0.35rem;
+    letter-spacing: 1.3px;
+    margin-bottom: 0.6rem;
+    font-family: 'Mulish', sans-serif;
 }
 
-/* ── STATUS PILLS ────────────────────────────────────────────────────────── */
-.pill-green  { background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; border-radius:20px; padding:3px 12px; font-weight:600; font-size:0.8rem; }
-.pill-yellow { background:#FFFBEB; color:#92400E; border:1px solid #FDE68A; border-radius:20px; padding:3px 12px; font-weight:600; font-size:0.8rem; }
-.pill-red    { background:#FEF2F2; color:#991B1B; border:1px solid #FECACA; border-radius:20px; padding:3px 12px; font-weight:600; font-size:0.8rem; }
+/* ── STATUS PILLS ────────────────────────────────────────────── */
+.pill-green  { background:#EBF5EE; color:#2E6B4A; border:1.5px solid rgba(74,140,111,0.35); border-radius:999px; padding:5px 16px; font-weight:700; font-size:0.9rem; display:inline-block; font-family:'Mulish',sans-serif; }
+.pill-yellow { background:#FEF6EA; color:#8A5A1A; border:1.5px solid rgba(176,138,110,0.40); border-radius:999px; padding:5px 16px; font-weight:700; font-size:0.9rem; display:inline-block; font-family:'Mulish',sans-serif; }
+.pill-red    { background:#FDF1EF; color:#9B2C1E; border:1.5px solid rgba(192,57,43,0.30);  border-radius:999px; padding:5px 16px; font-weight:700; font-size:0.9rem; display:inline-block; font-family:'Mulish',sans-serif; }
 
-/* ── SECTION LABEL ───────────────────────────────────────────────────────── */
+/* ── SECTION DIVIDER LABEL ───────────────────────────────────── */
 .section-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #7F77DD;
+    font-size: 0.73rem;
+    font-weight: 800;
+    color: var(--c-clay);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 1.5rem 0 0.4rem;
-    border-top: 1px solid #F4F3FE;
-    padding-top: 1rem;
+    letter-spacing: 1.3px;
+    margin: 1.85rem 0 0.6rem;
+    border-top: 1.5px solid var(--c-taupe);
+    padding-top: 1.2rem;
+    font-family: 'Mulish', sans-serif;
 }
 
-/* ── FOOTER ──────────────────────────────────────────────────────────────── */
+/* ── FOOTER ──────────────────────────────────────────────────── */
 .nexus-footer {
-    margin-top: 3rem;
-    padding-top: 1rem;
-    border-top: 1px solid #F4F3FE;
+    margin-top: 3.5rem;
+    padding: 1.5rem 2rem;
+    background: var(--c-surface);
+    border: 1.5px solid var(--c-border);
+    border-radius: var(--r-card);
     text-align: center;
-    font-size: 0.72rem;
-    color: #A0A0B8;
-    line-height: 1.6;
+    font-size: 0.9rem !important;
+    color: var(--c-text-2) !important;
+    line-height: 1.8;
+    box-shadow: var(--shadow-sm);
+    font-family: 'Mulish', sans-serif;
 }
+.nexus-footer strong { color: var(--c-ink) !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -215,12 +683,12 @@ def render_header(page_title: str, page_sub: str = ""):
         except Exception:
             current_day = state.get("recovery_day", 1)
         if name:
-            badge_html = f'<span class="nph-badge">👤 {name} &nbsp;·&nbsp; Day {current_day} of 30</span>'
-    sub = f" &nbsp;·&nbsp; {page_sub.upper()}" if page_sub else ""
+            badge_html = f'<span class="nph-badge">🌿 {name} &nbsp;·&nbsp; Day {current_day} of 30</span>'
+    sub = f" &nbsp;·&nbsp; {page_sub}" if page_sub else ""
     st.markdown(f"""
 <div class="nexus-page-header">
   <div style="flex:1">
-    <p class="nph-logo">💜 Nexus</p>
+    <p class="nph-logo">🌿 Nexus</p>
     <p class="nph-sub">Post-Hospital Recovery Co-Pilot{sub}</p>
   </div>
   {badge_html}
@@ -230,18 +698,18 @@ def render_header(page_title: str, page_sub: str = ""):
 def render_footer():
     st.markdown("""
 <div class="nexus-footer">
-  Nexus is a recovery support tool and does not provide medical advice.<br>
+  Nexus is a recovery support tool and does <strong>not</strong> provide medical advice.<br>
   In an emergency, call <strong>911</strong> immediately.<br>
-  &copy; 2026 Nexus Health &nbsp;·&nbsp; All data stored securely &nbsp;·&nbsp; HIPAA-compliant infrastructure
+  &copy; 2026 Nexus Health &nbsp;·&nbsp; Your data is stored securely &nbsp;·&nbsp; HIPAA-compliant
 </div>""", unsafe_allow_html=True)
 
 
 # ─── SIDEBAR ─────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
-<div style="padding:0.5rem 0 0.75rem">
-  <div style="font-size:1.3rem;font-weight:800;color:white;letter-spacing:-0.5px">💜 Nexus</div>
-  <div style="font-size:0.68rem;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;margin-top:2px">Recovery Co-Pilot</div>
+<div style="padding:1.5rem 0.5rem 1.5rem">
+  <div style="font-size:3.2rem;font-weight:700;color:#FBF8EF;letter-spacing:-0.5px;line-height:1.0;font-family:'Playfair Display',Georgia,serif">🌿 Nexus</div>
+  <div style="font-size:1.1rem;color:rgba(237,232,218,0.72);letter-spacing:0.4px;margin-top:10px;font-weight:500;font-family:'Mulish',sans-serif">Recovery Co-Pilot</div>
 </div>""", unsafe_allow_html=True)
 
     if st.session_state.recovery_state:
@@ -258,16 +726,23 @@ with st.sidebar:
         icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(last_class, "")
 
         patient_name = state.get("patient_name", "Patient")
+        _last_cl_html = (
+            "<div>"
+            "<div style=\"font-size:0.68rem;color:rgba(237,232,218,0.50);text-transform:uppercase;"
+            "letter-spacing:0.6px;font-family:Mulish,sans-serif\">Last Check-in</div>"
+            f"<div style=\"font-size:1.05rem;font-weight:600;color:#FBF8EF;font-family:Mulish,sans-serif\">{icon} {last_class}</div>"
+            "</div>"
+        ) if last_class else ""
         st.markdown(f"""
-<div style="background:rgba(255,255,255,0.08);border-radius:10px;padding:0.75rem 1rem;margin:0.25rem 0 0.75rem">
-  <div style="font-size:0.78rem;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.5px">Patient</div>
-  <div style="font-size:1rem;font-weight:600;color:white;margin-top:2px">{patient_name}</div>
-  <div style="display:flex;gap:1rem;margin-top:0.5rem">
+<div style="background:rgba(255,255,255,0.07);border-radius:12px;padding:1rem 1.1rem;margin:0 0 0.75rem;border:1px solid rgba(255,255,255,0.08)">
+  <div style="font-size:0.72rem;color:rgba(237,232,218,0.55);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;font-family:'Mulish',sans-serif">Patient</div>
+  <div style="font-size:1.12rem;font-weight:700;color:#FBF8EF;margin-top:4px;font-family:'Playfair Display',Georgia,serif">{patient_name}</div>
+  <div style="display:flex;gap:1.25rem;margin-top:0.7rem">
     <div>
-      <div style="font-size:0.68rem;color:rgba(255,255,255,0.5)">DAY</div>
-      <div style="font-size:1.1rem;font-weight:700;color:white">{current_day}<span style="font-size:0.75rem;font-weight:400;color:rgba(255,255,255,0.5)"> / 30</span></div>
+      <div style="font-size:0.68rem;color:rgba(237,232,218,0.50);text-transform:uppercase;letter-spacing:0.6px;font-family:'Mulish',sans-serif">Day</div>
+      <div style="font-size:1.3rem;font-weight:800;color:#FBF8EF;font-family:'Playfair Display',Georgia,serif">{current_day}<span style="font-size:0.82rem;font-weight:400;color:rgba(237,232,218,0.45);font-family:'Mulish',sans-serif"> / 30</span></div>
     </div>
-    {'<div><div style="font-size:0.68rem;color:rgba(255,255,255,0.5)">LAST CHECK-IN</div><div style="font-size:1rem;font-weight:600;color:white">' + icon + ' ' + last_class + '</div></div>' if last_class else ''}
+    {_last_cl_html}
   </div>
 </div>""", unsafe_allow_html=True)
 
@@ -278,10 +753,10 @@ with st.sidebar:
 
         diag = state.get("diagnosis", "")
         if diag:
-            st.markdown(f'<div style="font-size:0.72rem;color:rgba(255,255,255,0.45);padding:0 0.25rem 0.5rem;line-height:1.4">{diag}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.82rem;color:rgba(237,232,218,0.45);padding:0 0.25rem 0.5rem;line-height:1.5;font-family:\'Mulish\',sans-serif">{diag}</div>', unsafe_allow_html=True)
 
     st.divider()
-    st.markdown('<div style="font-size:0.65rem;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;padding:0 0.25rem">Navigation</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:0.68rem;color:rgba(237,232,218,0.40);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;padding:0 0.1rem;font-family:\'Mulish\',sans-serif;font-weight:700">Navigation</div>', unsafe_allow_html=True)
     if st.button("📋  Care Plan", use_container_width=True):
         st.session_state.page = "care_plan"
     if st.button("🎤  Daily Check-in", use_container_width=True):
@@ -366,8 +841,8 @@ def generate_provider_summary_text(state: dict) -> str:
 if st.session_state.page == "onboarding" and not st.session_state.recovery_state:
     st.markdown("""
 <div class="nexus-hero">
-  <h1>Welcome to Nexus</h1>
-  <p>Your personal recovery co-pilot — helping you stay safe, informed, and connected to your care team from the comfort of home.</p>
+  <div style="font-size:2.65rem;font-weight:700;color:#2B2B26;line-height:1.2;margin-bottom:0.85rem;font-family:'Playfair Display',Georgia,serif">Welcome to Nexus</div>
+  <div style="font-size:1.12rem;color:#5A5750;line-height:1.78;font-family:'Mulish',sans-serif;max-width:580px">Your personal recovery co-pilot — helping you stay safe, informed, and connected to your care team from the comfort of home.</div>
   <div class="nexus-trust-row">
     <span class="nexus-trust-item">✓ &nbsp;AI-powered daily check-ins</span>
     <span class="nexus-trust-item">✓ &nbsp;Medication tracking</span>
@@ -380,8 +855,8 @@ if st.session_state.page == "onboarding" and not st.session_state.recovery_state
     with col_info:
         st.markdown("""
 <div class="clinical-card" style="margin-top:0.25rem">
-  <div class="card-section-label">What you'll need</div>
-  <ul style="margin:0.5rem 0 0;padding-left:1.2rem;line-height:2">
+  <div class="card-section-label">What you will need</div>
+  <ul style="margin:0.6rem 0 0;padding-left:1.3rem;line-height:2.1;font-size:1rem;color:#2B2B26;font-family:'Mulish',sans-serif">
     <li>Your hospital discharge summary PDF</li>
     <li>Your discharge date</li>
     <li>An emergency contact (optional)</li>
@@ -389,19 +864,19 @@ if st.session_state.page == "onboarding" and not st.session_state.recovery_state
 </div>
 <div class="clinical-card">
   <div class="card-section-label">How it works</div>
-  <ol style="margin:0.5rem 0 0;padding-left:1.2rem;line-height:2.1;font-size:0.92rem">
-    <li>Upload your discharge PDF — Nexus reads it automatically</li>
-    <li>Log past days if you set up late</li>
+  <ol style="margin:0.6rem 0 0;padding-left:1.3rem;line-height:2.2;font-size:1rem;color:#2B2B26;font-family:'Mulish',sans-serif">
+    <li>Upload your discharge PDF — Nexus reads it for you</li>
+    <li>Log any past days if you are setting up late</li>
     <li>Complete a short daily check-in each morning</li>
     <li>Your care team is alerted if anything needs attention</li>
   </ol>
 </div>
-<div style="font-size:0.75rem;color:#A0A0B8;margin-top:0.5rem;line-height:1.6">
+<div style="font-size:0.9rem;color:#9A938A;margin-top:0.5rem;line-height:1.7;padding:0 0.1rem;font-family:'Mulish',sans-serif">
   🔒 &nbsp;Your data is encrypted and never shared without your consent.
 </div>""", unsafe_allow_html=True)
 
     with col_form:
-        st.markdown('<div class="card-section-label" style="margin-bottom:0.75rem">Set up your recovery plan</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-section-label" style="margin-bottom:0.85rem">Set up your recovery plan</div>', unsafe_allow_html=True)
         with st.form("onboarding_form"):
             col1, col2 = st.columns(2)
             with col1:
@@ -818,17 +1293,36 @@ elif st.session_state.page == "checkin":
                 audio.export(audio_buffer, format="wav")
                 audio_bytes = audio_buffer.getvalue()
 
-                with st.spinner("Transcribing your voice check-in..."):
-                    from tools.elevenlabs_stt import transcribe_audio, parse_transcript_to_responses
-                    stt_result = transcribe_audio(audio_bytes, mime_type="audio/wav")
+                # Use audio hash to detect new recording vs page rerun.
+                # This prevents re-transcribing and re-parsing on every Streamlit rerun.
+                audio_hash = hash(audio_bytes)
+                if st.session_state.get("_voice_audio_hash") != audio_hash:
+                    st.session_state._voice_audio_hash = audio_hash
+                    st.session_state._voice_stt_result = None
+                    st.session_state._voice_parsed_responses = None
+
+                if st.session_state._voice_stt_result is None:
+                    with st.spinner("Transcribing your voice check-in..."):
+                        from tools.elevenlabs_stt import transcribe_audio, parse_transcript_to_responses
+                        st.session_state._voice_stt_result = transcribe_audio(audio_bytes, mime_type="audio/wav")
+                else:
+                    from tools.elevenlabs_stt import parse_transcript_to_responses
+
+                stt_result = st.session_state._voice_stt_result
 
                 if stt_result["success"]:
                     transcript = stt_result["transcript"]
                     st.success("✅ Voice check-in received")
                     st.info(f"**What we heard:** {transcript}")
 
-                    with st.spinner("Understanding your responses..."):
-                        responses = parse_transcript_to_responses(transcript, questions, state)
+                    if st.session_state._voice_parsed_responses is None:
+                        with st.spinner("Understanding your responses..."):
+                            st.session_state._voice_parsed_responses = parse_transcript_to_responses(
+                                transcript, questions, state
+                            )
+
+                    # Work from a copy so form widget values can safely override nulls
+                    responses = dict(st.session_state._voice_parsed_responses)
 
                     missing_qs = [q for q in questions if responses.get(q["id"]) is None]
 
@@ -886,6 +1380,7 @@ elif st.session_state.page == "checkin":
                                         q["question"], key=f"vg_{recovery_day}_{q['id']}"
                                     )
                             if st.form_submit_button("Complete & Submit Check-in"):
+                                st.session_state._voice_audio_hash = None  # clear cache
                                 state["todays_checkin_responses"] = responses
                                 state["checkin_method"] = "voice+typed"
                                 _run_monitoring(state)
@@ -893,6 +1388,7 @@ elif st.session_state.page == "checkin":
                         col1, col2 = st.columns(2)
                         with col1:
                             if st.button("✅ That's correct — submit"):
+                                st.session_state._voice_audio_hash = None  # clear cache
                                 state["todays_checkin_responses"] = responses
                                 state["checkin_method"] = "voice"
                                 _run_monitoring(state)
@@ -1205,9 +1701,9 @@ elif st.session_state.page == "hospital_history":
                         year = hosp.get("admit_date", "")[:4] or hosp.get("discharge_date", "")[:4]
                         label = "Current" if is_current else year
                         st.markdown(
-                            f"<div style='background:{'#EEEDFE' if is_current else '#F4F3FE'};"
-                            f"border-radius:8px;padding:10px;text-align:center;"
-                            f"color:#534AB7;font-size:12px;font-weight:500'>{label}</div>",
+                            f"<div style='background:{'#EFF3E9' if is_current else '#F7F4EE'};"
+                            f"border-radius:10px;padding:10px;text-align:center;"
+                            f"color:#8A9A6B;font-size:13px;font-weight:700;font-family:Mulish,sans-serif'>{label}</div>",
                             unsafe_allow_html=True
                         )
                     with col2:

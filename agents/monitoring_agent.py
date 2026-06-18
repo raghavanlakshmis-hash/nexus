@@ -106,7 +106,7 @@ def run_monitoring_agent(state: dict, check_in_responses: dict) -> dict:
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=500,
+            max_tokens=1000,
             system=MONITORING_SYSTEM_PROMPT,
             messages=[{
                 "role": "user",
@@ -128,7 +128,7 @@ def run_monitoring_agent(state: dict, check_in_responses: dict) -> dict:
         result = json.loads(json_match.group())
 
     except Exception as e:
-        # Safe fallback — treat as YELLOW on classification error
+        print(f"[Monitoring Agent] Classification error: {type(e).__name__}: {e}")
         result = {
             "classification": "YELLOW",
             "flags": [f"Classification system error: {str(e)}"],
