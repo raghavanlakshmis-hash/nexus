@@ -51,16 +51,26 @@ def store_check_in(patient_id: str, check_in: dict) -> bool:
     namespace = f"patient_{patient_id}"
     vector_id = f"{patient_id}_checkin_{check_in['day']}"
 
+    # Pinecone metadata only supports str/number/bool/list-of-str.
+    # Serialize nested dicts and lists-of-non-str as JSON strings.
+    metadata = {
+        "type": "check_in",
+        "stored_at": datetime.now().isoformat(),
+        "day": check_in.get("day", 0),
+        "timestamp": check_in.get("timestamp", ""),
+        "classification": check_in.get("classification", ""),
+        "summary": check_in.get("summary", ""),
+        "recommended_action": check_in.get("recommended_action", ""),
+        "responses_json": json.dumps(check_in.get("responses", {})),
+        "flags_json": json.dumps(check_in.get("flags", [])),
+    }
+
     try:
         index.upsert(
             vectors=[{
                 "id": vector_id,
                 "values": embed_text(json.dumps(check_in)),
-                "metadata": {
-                    **check_in,
-                    "type": "check_in",
-                    "stored_at": datetime.now().isoformat()
-                }
+                "metadata": metadata
             }],
             namespace=namespace
         )

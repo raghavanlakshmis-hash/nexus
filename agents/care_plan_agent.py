@@ -45,19 +45,42 @@ def run_care_plan_agent(state: dict) -> dict:
         if not interaction_results["all_clear"]:
             # Flag medications for human review
             for detail in interaction_results["interaction_details"]:
+                drug_label = detail["drug_1"]
+                severity = detail.get("severity", "REVIEW_REQUIRED")
+
+                if severity == "BOXED_WARNING":
+                    what_it_means = (
+                        "This medication has a serious warning printed on its label (an FDA black box warning). "
+                        "Your doctor prescribed it knowing this — do not stop taking it on your own."
+                    )
+                elif severity == "API_ERROR":
+                    what_it_means = (
+                        "We were unable to automatically check this medication. "
+                        "This is a system limitation, not necessarily a problem with the medication itself."
+                    )
+                else:
+                    other = f" and {detail['drug_2']}" if detail.get("drug_2") else ""
+                    drug_label += f" + {detail['drug_2']}" if detail.get("drug_2") else ""
+                    what_it_means = (
+                        f"This medication may interact with another medication you are taking{other}. "
+                        "Your pharmacist can confirm whether this is a concern for your specific doses."
+                    )
+
+                content = "\n".join([
+                    f"Medication to check: {drug_label}",
+                    f"What this means: {what_it_means}",
+                    "What to do: Before your next dose, please call your pharmacist or doctor's office to confirm it is safe.",
+                    "Important: Do not stop any medication on your own without speaking to your doctor first.",
+                ])
+
                 approval_item = {
                     "id": str(uuid.uuid4()),
                     "type": "medication_conflict",
-                    "content": f"MEDICATION FLAG: {detail['drug_1']}"
-                               + (f" + {detail['drug_2']}" if detail['drug_2'] else "")
-                               + f"\nSeverity: {detail['severity']}"
-                               + f"\nDetails: {detail['interaction_text']}"
-                               + "\n\nAction required: Please consult your pharmacist or physician before taking these medications.",
+                    "content": content,
                     "recipient": "patient_caregiver",
                     "status": "pending",
                     "created_at": datetime.now().isoformat()
                 }
-                state["human_approval_queue"].append(approval_item)
 
             # Mark flagged medications in state
             for med in state["medications"]:
@@ -75,7 +98,7 @@ def run_care_plan_agent(state: dict) -> dict:
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=3000,
+            max_tokens=6000,
             system=CARE_PLAN_SYSTEM_PROMPT,
             messages=[{
                 "role": "user",
@@ -93,11 +116,13 @@ def run_care_plan_agent(state: dict) -> dict:
         )
 
         care_plan_text = response.content[0].text.strip()
-        if care_plan_text.startswith("```"):
-            care_plan_text = care_plan_text.split("```")[1]
-            if care_plan_text.startswith("json"):
-                care_plan_text = care_plan_text[4:]
-        care_plan = json.loads(care_plan_text.strip())
+        if response.stop_reason == "max_tokens":
+            raise ValueError("Care plan response was truncated (hit max_tokens). Increase limit or simplify prompt.")
+        import re as _re
+        json_match = _re.search(r'\{[\s\S]*\}', care_plan_text)
+        if not json_match:
+            raise ValueError(f"No JSON in care plan response: {care_plan_text[:200]}")
+        care_plan = json.loads(json_match.group())
 
     except Exception as e:
         state["active_flags"].append(f"CARE_PLAN_GENERATION_FAILED: {str(e)}")
@@ -128,7 +153,7 @@ def run_care_plan_via_nebius(state: dict) -> str:
 
     try:
         response = nebius_client.chat.completions.create(
-            model="meta-llama/Meta-Llama-3.1-70B-Instruct-fast",
+            model="meta-llama/Meta-Llama-3.1-70B-Instruct",
             messages=[
                 {"role": "system", "content": CARE_PLAN_SYSTEM_PROMPT},
                 {"role": "user", "content": f"Generate care plan for: {state['diagnosis']}"}

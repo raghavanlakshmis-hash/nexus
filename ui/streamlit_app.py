@@ -48,7 +48,13 @@ with st.sidebar:
         state = st.session_state.recovery_state
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Day", f"{state.get('recovery_day', 0)} of 30")
+            discharge_str = state.get("discharge_date", "")
+            try:
+                d_date = datetime.strptime(discharge_str, "%Y-%m-%d").date()
+                current_day = max(1, (datetime.now().date() - d_date).days + 1)
+            except Exception:
+                current_day = state.get("recovery_day", 1)
+            st.metric("Day", f"{current_day} of 30")
         with col2:
             checkin_history = state.get("check_in_history", [])
             if checkin_history:
@@ -103,11 +109,12 @@ def _run_monitoring(state):
             st.rerun()
     elif classification == "YELLOW":
         st.warning(f"⚠️ We noticed some things today: {last_checkin.get('summary')}")
-        st.write(last_checkin.get("recommended_action", ""))
+        rec_action = last_checkin.get("recommended_action") or \
+            result_state.get("last_monitoring_result", {}).get("recommended_action", "")
+        if rec_action:
+            st.info(f"**What to do:** {rec_action}")
     else:
         st.success(f"✅ Great — {last_checkin.get('summary')}")
-
-    result_state["recovery_day"] = result_state.get("recovery_day", 1) + 1
 
 
 def generate_provider_summary_text(state: dict) -> str:
@@ -209,6 +216,8 @@ if st.session_state.page == "onboarding" and not st.session_state.recovery_state
                 "active_flags": [],
                 "human_approval_queue": [],
                 "check_in_history": [],
+                "daily_vitals_log": [],
+                "hospitalization_history": [],
                 "messages": [],
                 "intake_complete": False,
                 "care_plan_complete": False,
@@ -248,18 +257,24 @@ elif st.session_state.page == "care_plan":
                              if i["type"] == "medication_conflict" and i["status"] == "pending"]
 
         if pending_med_flags:
-            st.error("⚠️ MEDICATION FLAGS REQUIRE YOUR ATTENTION")
+            st.error("⚠️ One or more medications need a quick check before you take them.")
             for flag in pending_med_flags:
-                with st.expander("View medication flag"):
-                    st.write(flag["content"])
+                # First line of content is "Medication to check: ..."
+                first_line = flag["content"].split("\n")[0] if flag["content"] else "Medication flag"
+                label = first_line.replace("Medication to check: ", "").strip()
+                with st.expander(f"View details — {label}", expanded=True):
+                    for line in flag["content"].split("\n"):
+                        if line.strip():
+                            st.markdown(f"- {line.strip()}")
+                    st.divider()
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button("I've reviewed with my pharmacist", key=f"approve_{flag['id']}"):
+                        if st.button("I've spoken with my pharmacist", key=f"approve_{flag['id']}"):
                             flag["status"] = "approved"
                             st.rerun()
                     with col2:
                         if st.button("I need more help", key=f"help_{flag['id']}"):
-                            st.write("Please call your pharmacy or 1-800-PHARMACY")
+                            st.info("Call your pharmacy or 1-800-PHARMACY (1-800-742-7629).")
 
         # Display care plan
         care_plan = state.get("care_plan", {})
@@ -305,24 +320,65 @@ elif st.session_state.page == "checkin":
     if not state:
         st.warning("Please complete onboarding first.")
     else:
-        st.title(f"Day {state.get('recovery_day', 1)} Check-in")
-        st.write("Speak your check-in or type your answers below.")
+        # ── DATE PICKER ──────────────────────────────────────────────────────
+        discharge_str = state.get("discharge_date", "")
+        try:
+            discharge_date_obj = datetime.strptime(discharge_str, "%Y-%m-%d").date()
+        except Exception:
+            discharge_date_obj = None
+
+        today = datetime.now().date()
+        checkin_date = st.date_input(
+            "Check-in date",
+            value=None,
+            min_value=discharge_date_obj or today,
+            max_value=today,
+        )
+
+        if checkin_date is None:
+            st.info("Please select a check-in date above to continue.")
+            st.stop()
+
+        if discharge_date_obj:
+            recovery_day = max(1, (checkin_date - discharge_date_obj).days + 1)
+        else:
+            recovery_day = max(1, state.get("recovery_day", 1))
+        state["recovery_day"] = recovery_day
+
+        st.title(f"Check-in — {checkin_date.strftime('%B %d, %Y')}  ·  Day {recovery_day}")
 
         questions = generate_checkin_questions(state)
         responses = {}
+
+        # ── VOICE GUIDANCE ───────────────────────────────────────────────────
+        meds = [m["name"] for m in state.get("medications", []) if not m.get("interaction_flag")]
+        guidance_items = []
+        if meds:
+            guidance_items.append(f"**Medications taken today:** mention each by name — {', '.join(meds)}")
+        guidance_items.append("**Your overall energy level** (say a number from 1 to 10)")
+        if any(q["id"] == "weight" for q in questions):
+            guidance_items.append("**Your weight this morning** in pounds")
+        if any(q["id"] == "swelling" for q in questions):
+            guidance_items.append("**Any swelling** in your ankles, feet, or legs (yes/no and how much)")
+        if any(q["id"] == "breathing" for q in questions):
+            guidance_items.append("**Any shortness of breath** while resting or lying flat")
+        guidance_items.append("**Any warning symptoms** such as chest pain, dizziness, or fever")
+        guidance_items.append("**Any other concerns** you want your care team to know about")
+
+        st.info(
+            "**Before you record, please mention all of these:**\n\n" +
+            "\n".join(f"- {item}" for item in guidance_items)
+        )
 
         # ── VOICE INPUT ──────────────────────────────────────────────────────
         st.subheader("🎤 Speak Your Check-in (Recommended)")
         st.caption("Click record, speak naturally about how you're feeling, then click stop.")
 
-        # streamlit-audiorecorder gives a simple record/stop button
-        # Install: pip install streamlit-audiorecorder
         try:
             from audiorecorder import audiorecorder
             audio = audiorecorder("🎤 Start Recording", "⏹ Stop Recording")
 
             if len(audio) > 0:
-                # Audio was recorded — convert to bytes and send to ElevenLabs
                 import io
                 audio_buffer = io.BytesIO()
                 audio.export(audio_buffer, format="wav")
@@ -337,59 +393,107 @@ elif st.session_state.page == "checkin":
                     st.success("✅ Voice check-in received")
                     st.info(f"**What we heard:** {transcript}")
 
-                    # Parse transcript into structured responses
                     with st.spinner("Understanding your responses..."):
                         responses = parse_transcript_to_responses(transcript, questions, state)
 
-                    # Show parsed responses for patient to confirm
-                    st.subheader("We understood the following — please confirm:")
+                    missing_qs = [q for q in questions if responses.get(q["id"]) is None]
+
+                    st.subheader("We understood the following:")
                     for q in questions:
                         val = responses.get(q["id"])
                         if val is not None:
-                            st.write(f"**{q['question']}** → {val}")
+                            st.write(f"✅ **{q['question']}** → {val}")
 
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("✅ That's correct — submit"):
-                            state["todays_checkin_responses"] = responses
-                            state["checkin_method"] = "voice"
-                            _run_monitoring(state)
-                    with col2:
-                        if st.button("✏️ Edit my answers instead"):
-                            st.session_state.show_typed_form = True
-                            st.rerun()
+                    if missing_qs:
+                        st.warning(
+                            f"We didn't catch answers to {len(missing_qs)} question(s) from your recording. "
+                            "Please fill these in:"
+                        )
+                        with st.form("voice_fill_gaps"):
+                            for q in missing_qs:
+                                if q["type"] == "med_checkbox":
+                                    responses[q["id"]] = st.radio(
+                                        q.get("med_name", q["id"]),
+                                        options=["Yes — I took it", "No — I missed it"],
+                                        index=None,
+                                        horizontal=True,
+                                        key=f"vg_{q['id']}"
+                                    )
+                                elif q["type"] == "scale_1_10":
+                                    responses[q["id"]] = st.slider(
+                                        q["question"], 1, 10, 5, key=f"vg_{q['id']}"
+                                    )
+                                elif q["type"] == "number_lbs":
+                                    responses[q["id"]] = st.number_input(
+                                        q["question"], min_value=50, max_value=500,
+                                        value=150, step=1, key=f"vg_{q['id']}"
+                                    )
+                                elif q["type"] == "yes_no_detail":
+                                    col1, col2 = st.columns([1, 2])
+                                    with col1:
+                                        responses[q["id"]] = st.radio(
+                                            q["question"], ["Yes", "No"], key=f"vg_{q['id']}"
+                                        )
+                                    with col2:
+                                        responses[f"{q['id']}_detail"] = st.text_input(
+                                            "Any details?", key=f"vgd_{q['id']}"
+                                        )
+                                elif q["type"] in ("symptom_checklist", "multi_select"):
+                                    st.write(q["question"])
+                                    selected = []
+                                    for i, opt in enumerate(q.get("options", [])):
+                                        if st.checkbox(opt, key=f"vg_{q['id']}_{i}"):
+                                            selected.append(opt)
+                                    responses[q["id"]] = selected
+                                elif q["type"] == "free_text":
+                                    responses[q["id"]] = st.text_area(
+                                        q["question"], key=f"vg_{q['id']}"
+                                    )
+                            if st.form_submit_button("Complete & Submit Check-in"):
+                                state["todays_checkin_responses"] = responses
+                                state["checkin_method"] = "voice+typed"
+                                _run_monitoring(state)
+                    else:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("✅ That's correct — submit"):
+                                state["todays_checkin_responses"] = responses
+                                state["checkin_method"] = "voice"
+                                _run_monitoring(state)
+                        with col2:
+                            if st.button("✏️ Edit my answers instead"):
+                                st.session_state.show_typed_form = True
+                                st.rerun()
 
                 else:
-                    # STT failed — show error and fall through to typed form
                     st.warning(f"⚠️ Voice transcription issue: {stt_result['error']}")
                     st.info("No problem — please type your responses below.")
                     st.session_state.show_typed_form = True
 
         except ImportError:
-            # audiorecorder not installed — fall through to typed form
             st.session_state.show_typed_form = True
 
         # ── TYPED FALLBACK ───────────────────────────────────────────────────
         show_typed = st.session_state.get("show_typed_form", False)
         with st.expander("📝 Type your responses instead", expanded=show_typed):
             with st.form("checkin_form"):
+                st.markdown("#### 💊 Medications — did you take each one today?")
                 for q in questions:
-                    if q["type"] == "med_checkbox":
-                        responses[q["id"]] = st.checkbox(
-                            q["question"], value=True, key=f"q_{q['id']}"
-                        )
-                    elif q["type"] == "yes_no_detail":
-                        col1, col2 = st.columns([1, 2])
-                        with col1:
-                            responses[q["id"]] = st.radio(
-                                q["question"], ["Yes", "No"],
-                                key=f"q_{q['id']}"
-                            )
-                        with col2:
-                            responses[f"{q['id']}_detail"] = st.text_input(
-                                "Any details?", key=f"d_{q['id']}"
-                            )
-                    elif q["type"] == "scale_1_10":
+                    if q["type"] != "med_checkbox":
+                        continue
+                    responses[q["id"]] = st.radio(
+                        q.get("med_name", q["id"]),
+                        options=["Yes — I took it", "No — I missed it"],
+                        index=None,
+                        horizontal=True,
+                        key=f"q_{q['id']}"
+                    )
+
+                st.markdown("#### 📊 How are you doing?")
+                for q in questions:
+                    if q["type"] not in ("scale_1_10", "number_lbs", "yes_no_detail"):
+                        continue
+                    if q["type"] == "scale_1_10":
                         responses[q["id"]] = st.slider(
                             q["question"], 1, 10, 5, key=f"q_{q['id']}"
                         )
@@ -398,15 +502,33 @@ elif st.session_state.page == "checkin":
                             q["question"], min_value=50, max_value=500,
                             value=150, step=1, key=f"q_{q['id']}"
                         )
-                    elif q["type"] == "multi_select":
-                        responses[q["id"]] = st.multiselect(
-                            q["question"], q.get("options", []),
-                            key=f"q_{q['id']}"
-                        )
-                    elif q["type"] == "free_text":
-                        responses[q["id"]] = st.text_area(
-                            q["question"], key=f"q_{q['id']}"
-                        )
+                    elif q["type"] == "yes_no_detail":
+                        col1, col2 = st.columns([1, 2])
+                        with col1:
+                            responses[q["id"]] = st.radio(
+                                q["question"], ["Yes", "No"], key=f"q_{q['id']}"
+                            )
+                        with col2:
+                            responses[f"{q['id']}_detail"] = st.text_input(
+                                "Any details?", key=f"d_{q['id']}"
+                            )
+
+                st.markdown("#### ⚠️ Symptom check — tick any you are experiencing right now")
+                for q in questions:
+                    if q["type"] not in ("symptom_checklist", "multi_select"):
+                        continue
+                    st.write(q["question"])
+                    selected = []
+                    for i, opt in enumerate(q.get("options", [])):
+                        if st.checkbox(opt, key=f"q_{q['id']}_{i}"):
+                            selected.append(opt)
+                    responses[q["id"]] = selected
+
+                st.markdown("#### 💬 Anything else?")
+                for q in questions:
+                    if q["type"] != "free_text":
+                        continue
+                    responses[q["id"]] = st.text_area(q["question"], key=f"q_{q['id']}")
 
                 submitted = st.form_submit_button("Submit Check-in")
 
@@ -497,17 +619,22 @@ elif st.session_state.page == "dashboard":
                     f"{checkin.get('summary', '')}"
                 )
 
-            if state.get("daily_vitals_log"):
+            vitals_log = state.get("daily_vitals_log", [])
+            if vitals_log:
                 st.subheader("Medication adherence")
                 meds = [m["name"] for m in state.get("medications", [])]
-                vitals_log = state.get("daily_vitals_log", [])
                 for med in meds:
-                    taken_days = sum(
-                        1 for v in vitals_log if med in v.get("meds_taken", [])
-                    )
-                    total_days = len(vitals_log)
-                    pct = int((taken_days / total_days * 100)) if total_days > 0 else 0
-                    st.progress(pct / 100, text=f"{med}: {taken_days}/{total_days} days")
+                    taken_days = sum(1 for v in vitals_log if med in v.get("meds_taken", []))
+                    missed_days = sum(1 for v in vitals_log if med in v.get("meds_missed", []))
+                    total_days = taken_days + missed_days  # only count days where we have an answer
+                    if total_days == 0:
+                        st.progress(0.0, text=f"{med}: no data yet")
+                    else:
+                        pct = taken_days / total_days
+                        label = f"{med}: {taken_days}/{total_days} days"
+                        if missed_days > 0:
+                            label += f"  ({missed_days} missed)"
+                        st.progress(pct, text=label)
 
 # ─── PAGE: PROVIDER SUMMARY ───────────────────────────────────────────────────
 elif st.session_state.page == "provider_summary":
@@ -572,14 +699,18 @@ elif st.session_state.page == "provider_summary":
             # Medication adherence
             st.subheader("Medication adherence")
             meds = [m["name"] for m in state.get("medications", [])]
-            for med in meds:
-                taken = sum(1 for v in vitals_log if med in v.get("meds_taken", []))
-                total = len(vitals_log)
-                missed = total - taken
-                if missed == 0:
-                    st.success(f"✅ {med} — {taken}/{total} days (perfect)")
-                else:
-                    st.warning(f"⚠️ {med} — {taken}/{total} days ({missed} missed)")
+            if not vitals_log:
+                st.info("Medication adherence will appear here after the first check-in is submitted.")
+            else:
+                for med in meds:
+                    taken = sum(1 for v in vitals_log if med in v.get("meds_taken", []))
+                    total = len(vitals_log)
+                    missed = total - taken
+                    if missed == 0:
+                        st.success(f"✅ {med} — {taken}/{total} days (perfect)")
+                    else:
+                        pct = int(taken / total * 100)
+                        st.warning(f"⚠️ {med} — {taken}/{total} days taken ({missed} missed, {pct}%)")
 
             # Flagged anomalies
             st.subheader("Flagged anomalies")

@@ -1,6 +1,7 @@
 from anthropic import Anthropic
 from tools.pinecone_store import store_check_in, retrieve_patient_history
 import json
+import re
 from datetime import datetime
 
 client = Anthropic()
@@ -77,8 +78,8 @@ def generate_checkin_questions(state: dict) -> list:
     if warning_signs:
         questions.append({
             "id": "warning_signs",
-            "question": f"Are you experiencing any of the following? (Select all that apply): {', '.join(warning_signs[:4])}",
-            "type": "multi_select",
+            "question": "Are you experiencing any of these symptoms right now?",
+            "type": "symptom_checklist",
             "options": warning_signs
         })
 
@@ -119,11 +120,10 @@ def run_monitoring_agent(state: dict, check_in_responses: dict) -> dict:
         )
 
         result_text = response.content[0].text.strip()
-        if result_text.startswith("```"):
-            result_text = result_text.split("```")[1]
-            if result_text.startswith("json"):
-                result_text = result_text[4:]
-        result = json.loads(result_text.strip())
+        json_match = re.search(r'\{[\s\S]*\}', result_text)
+        if not json_match:
+            raise ValueError(f"No JSON object in model response: {result_text[:200]}")
+        result = json.loads(json_match.group())
 
     except Exception as e:
         # Safe fallback — treat as YELLOW on classification error
@@ -141,14 +141,46 @@ def run_monitoring_agent(state: dict, check_in_responses: dict) -> dict:
         "timestamp": datetime.now().isoformat(),
         "responses": check_in_responses,
         "classification": result["classification"],
-        "flags": result["flags"],
-        "summary": result["summary"]
+        "flags": result.get("flags", []),
+        "summary": result.get("summary", ""),
+        "recommended_action": result.get("recommended_action", "")
     }
 
     # Store in Pinecone
     stored = store_check_in(state["patient_id"], check_in_record)
     if not stored:
         state["active_flags"].append("CHECKIN_STORAGE_FAILED")
+
+    # Extract vitals and medication adherence from this check-in
+    meds_taken = []
+    meds_missed = []
+    for med in state.get("medications", []):
+        if med.get("interaction_flag"):
+            continue
+        key = f"med_{med['name'].replace(' ', '_').lower()}"
+        val = check_in_responses.get(key)
+        if val is not None:
+            took_it = (val is True) or (isinstance(val, str) and "yes" in val.lower())
+            (meds_taken if took_it else meds_missed).append(med["name"])
+
+    vitals_record = {
+        "day": state["recovery_day"],
+        "date": datetime.now().date().isoformat(),
+        "weight_lbs": check_in_responses.get("weight"),
+        "bp_systolic": None,
+        "bp_diastolic": None,
+        "energy_score": check_in_responses.get("general_feeling"),
+        "meds_taken": meds_taken,
+        "meds_missed": meds_missed,
+    }
+
+    if "daily_vitals_log" not in state:
+        state["daily_vitals_log"] = []
+    # Replace any existing entry for this day, then append the fresh one
+    state["daily_vitals_log"] = [
+        v for v in state["daily_vitals_log"] if v["day"] != state["recovery_day"]
+    ]
+    state["daily_vitals_log"].append(vitals_record)
 
     # Update state
     state["check_in_history"].append(check_in_record)
