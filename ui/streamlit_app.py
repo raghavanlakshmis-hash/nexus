@@ -23,18 +23,169 @@ st.set_page_config(
     layout="wide"
 )
 
-# ── Purple theme CSS override for Streamlit elements ──────────────────────────
-# The .streamlit/config.toml handles global theming.
-# This block adds fine-grained overrides for elements config.toml can't reach.
 st.markdown("""
 <style>
-[data-testid="stSidebar"] { background-color: #F4F3FE; }
-[data-testid="stSidebar"] hr { border-color: #CECBF6; }
-.stButton > button { border-color: #534AB7; color: #534AB7; }
-.stButton > button:hover { background-color: #EEEDFE; }
-.stMetric label { color: #7F77DD; font-size: 12px; }
-.stMetric [data-testid="stMetricValue"] { color: #3C3489; }
-div[data-testid="stAlert"][data-baseweb="notification"] { border-left-color: #534AB7; }
+/* ── SIDEBAR — dark navy gradient ────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #12112A 0%, #2D2A6E 100%) !important;
+}
+[data-testid="stSidebar"] .stMarkdown,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label { color: #E8E6F5 !important; }
+[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.12) !important; }
+[data-testid="stSidebar"] .stButton > button {
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: rgba(255,255,255,0.82) !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    font-size: 0.9rem !important;
+    text-align: left !important;
+    margin-bottom: 3px !important;
+    transition: all 0.15s ease !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(127,119,221,0.35) !important;
+    border-color: #7F77DD !important;
+    color: white !important;
+    transform: translateX(2px) !important;
+}
+[data-testid="stSidebar"] [data-testid="stMetricValue"] { color: white !important; font-weight: 700 !important; }
+[data-testid="stSidebar"] [data-testid="stMetricLabel"] { color: rgba(255,255,255,0.55) !important; font-size: 10px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; }
+[data-testid="stSidebar"] [data-testid="stMetricDeltaIcon-Up"],
+[data-testid="stSidebar"] [data-testid="stMetricDeltaIcon-Down"] { color: rgba(255,255,255,0.5) !important; }
+[data-testid="stSidebar"] .stWarning { background: rgba(251,191,36,0.15) !important; border-radius: 8px; }
+
+/* ── MAIN CONTENT ────────────────────────────────────────────────────────── */
+.block-container { padding-top: 1.25rem !important; max-width: 1050px !important; }
+
+/* ── BUTTONS ─────────────────────────────────────────────────────────────── */
+.stButton > button {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    border-color: #534AB7 !important;
+    color: #534AB7 !important;
+    transition: all 0.15s ease !important;
+}
+.stButton > button:hover {
+    background-color: #EEEDFE !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 14px rgba(83,74,183,0.22) !important;
+}
+
+/* ── FORM INPUTS ─────────────────────────────────────────────────────────── */
+[data-baseweb="input"] > div,
+[data-baseweb="textarea"] > div { border-radius: 8px !important; }
+
+/* ── TABS ────────────────────────────────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    background: #F4F3FE;
+    border-radius: 10px;
+    padding: 4px;
+    gap: 3px;
+    border-bottom: none !important;
+}
+.stTabs [data-baseweb="tab"] { border-radius: 8px !important; font-weight: 500 !important; padding: 0.4rem 1rem !important; }
+.stTabs [aria-selected="true"] {
+    background: white !important;
+    box-shadow: 0 1px 4px rgba(83,74,183,0.18) !important;
+    color: #534AB7 !important;
+}
+
+/* ── METRICS ─────────────────────────────────────────────────────────────── */
+[data-testid="stMetricLabel"] { color: #7F77DD !important; font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; }
+[data-testid="stMetricValue"] { color: #3C3489 !important; font-weight: 700 !important; }
+
+/* ── ALERTS ──────────────────────────────────────────────────────────────── */
+[data-testid="stAlert"] { border-radius: 10px !important; border-left-width: 4px !important; }
+
+/* ── EXPANDERS ───────────────────────────────────────────────────────────── */
+[data-testid="stExpander"] { border: 1px solid #E8E6F5 !important; border-radius: 10px !important; }
+[data-testid="stExpander"]:hover { border-color: #CECBF6 !important; }
+
+/* ── NEXUS PAGE HEADER ───────────────────────────────────────────────────── */
+.nexus-page-header {
+    background: linear-gradient(135deg, #2D2A6E 0%, #534AB7 60%, #7F77DD 100%);
+    border-radius: 14px;
+    padding: 1.2rem 1.75rem;
+    margin-bottom: 1.75rem;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(83,74,183,0.3);
+}
+.nph-logo { font-size: 1.35rem; font-weight: 800; color: white; letter-spacing: -0.5px; margin: 0; line-height: 1.2; }
+.nph-sub  { font-size: 0.72rem; color: rgba(255,255,255,0.68); letter-spacing: 1.2px; text-transform: uppercase; margin: 3px 0 0 0; }
+.nph-badge {
+    margin-left: auto;
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.82rem;
+    color: white;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* ── ONBOARDING HERO ─────────────────────────────────────────────────────── */
+.nexus-hero {
+    background: linear-gradient(135deg, #2D2A6E 0%, #534AB7 100%);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    color: white;
+    margin-bottom: 2rem;
+}
+.nexus-hero h1 { color: white !important; font-size: 2.2rem !important; font-weight: 800 !important; margin-bottom: 0.5rem !important; }
+.nexus-hero p  { color: rgba(255,255,255,0.82) !important; font-size: 1.05rem; line-height: 1.7; margin-bottom: 0; }
+.nexus-trust-row { display: flex; gap: 1.5rem; margin-top: 1.5rem; flex-wrap: wrap; }
+.nexus-trust-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: rgba(255,255,255,0.75); }
+
+/* ── CLINICAL CARD ───────────────────────────────────────────────────────── */
+.clinical-card {
+    background: white;
+    border: 1px solid #E8E6F5;
+    border-radius: 12px;
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 4px rgba(83,74,183,0.07);
+}
+.card-section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #7F77DD;
+    text-transform: uppercase;
+    letter-spacing: 1.1px;
+    margin-bottom: 0.35rem;
+}
+
+/* ── STATUS PILLS ────────────────────────────────────────────────────────── */
+.pill-green  { background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; border-radius:20px; padding:3px 12px; font-weight:600; font-size:0.8rem; }
+.pill-yellow { background:#FFFBEB; color:#92400E; border:1px solid #FDE68A; border-radius:20px; padding:3px 12px; font-weight:600; font-size:0.8rem; }
+.pill-red    { background:#FEF2F2; color:#991B1B; border:1px solid #FECACA; border-radius:20px; padding:3px 12px; font-weight:600; font-size:0.8rem; }
+
+/* ── SECTION LABEL ───────────────────────────────────────────────────────── */
+.section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #7F77DD;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 1.5rem 0 0.4rem;
+    border-top: 1px solid #F4F3FE;
+    padding-top: 1rem;
+}
+
+/* ── FOOTER ──────────────────────────────────────────────────────────────── */
+.nexus-footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid #F4F3FE;
+    text-align: center;
+    font-size: 0.72rem;
+    color: #A0A0B8;
+    line-height: 1.6;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -51,48 +202,97 @@ if "history_phase" not in st.session_state:
 if "history_selected_date" not in st.session_state:
     st.session_state.history_selected_date = None
 
+# ─── PAGE HEADER COMPONENT ───────────────────────────────────────────────────
+def render_header(page_title: str, page_sub: str = ""):
+    state = st.session_state.get("recovery_state")
+    badge_html = ""
+    if state:
+        name = state.get("patient_name", "")
+        discharge_str = state.get("discharge_date", "")
+        try:
+            d_date = datetime.strptime(discharge_str, "%Y-%m-%d").date()
+            current_day = max(1, (datetime.now().date() - d_date).days + 1)
+        except Exception:
+            current_day = state.get("recovery_day", 1)
+        if name:
+            badge_html = f'<span class="nph-badge">👤 {name} &nbsp;·&nbsp; Day {current_day} of 30</span>'
+    sub = f" &nbsp;·&nbsp; {page_sub.upper()}" if page_sub else ""
+    st.markdown(f"""
+<div class="nexus-page-header">
+  <div style="flex:1">
+    <p class="nph-logo">💜 Nexus</p>
+    <p class="nph-sub">Post-Hospital Recovery Co-Pilot{sub}</p>
+  </div>
+  {badge_html}
+</div>""", unsafe_allow_html=True)
+
+
+def render_footer():
+    st.markdown("""
+<div class="nexus-footer">
+  Nexus is a recovery support tool and does not provide medical advice.<br>
+  In an emergency, call <strong>911</strong> immediately.<br>
+  &copy; 2026 Nexus Health &nbsp;·&nbsp; All data stored securely &nbsp;·&nbsp; HIPAA-compliant infrastructure
+</div>""", unsafe_allow_html=True)
+
+
 # ─── SIDEBAR ─────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 💜 Nexus")
+    st.markdown("""
+<div style="padding:0.5rem 0 0.75rem">
+  <div style="font-size:1.3rem;font-weight:800;color:white;letter-spacing:-0.5px">💜 Nexus</div>
+  <div style="font-size:0.68rem;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;margin-top:2px">Recovery Co-Pilot</div>
+</div>""", unsafe_allow_html=True)
+
     if st.session_state.recovery_state:
         state = st.session_state.recovery_state
-        col1, col2 = st.columns(2)
-        with col1:
-            discharge_str = state.get("discharge_date", "")
-            try:
-                d_date = datetime.strptime(discharge_str, "%Y-%m-%d").date()
-                current_day = max(1, (datetime.now().date() - d_date).days + 1)
-            except Exception:
-                current_day = state.get("recovery_day", 1)
-            st.metric("Day", f"{current_day} of 30")
-        with col2:
-            checkin_history = state.get("check_in_history", [])
-            if checkin_history:
-                last = checkin_history[-1]
-                icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(
-                    last["classification"], "⚪"
-                )
-                st.metric("Last check-in", f"{icon} {last['classification']}")
+        discharge_str = state.get("discharge_date", "")
+        try:
+            d_date = datetime.strptime(discharge_str, "%Y-%m-%d").date()
+            current_day = max(1, (datetime.now().date() - d_date).days + 1)
+        except Exception:
+            current_day = state.get("recovery_day", 1)
+
+        checkin_history = state.get("check_in_history", [])
+        last_class = checkin_history[-1]["classification"] if checkin_history else None
+        icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(last_class, "")
+
+        patient_name = state.get("patient_name", "Patient")
+        st.markdown(f"""
+<div style="background:rgba(255,255,255,0.08);border-radius:10px;padding:0.75rem 1rem;margin:0.25rem 0 0.75rem">
+  <div style="font-size:0.78rem;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.5px">Patient</div>
+  <div style="font-size:1rem;font-weight:600;color:white;margin-top:2px">{patient_name}</div>
+  <div style="display:flex;gap:1rem;margin-top:0.5rem">
+    <div>
+      <div style="font-size:0.68rem;color:rgba(255,255,255,0.5)">DAY</div>
+      <div style="font-size:1.1rem;font-weight:700;color:white">{current_day}<span style="font-size:0.75rem;font-weight:400;color:rgba(255,255,255,0.5)"> / 30</span></div>
+    </div>
+    {'<div><div style="font-size:0.68rem;color:rgba(255,255,255,0.5)">LAST CHECK-IN</div><div style="font-size:1rem;font-weight:600;color:white">' + icon + ' ' + last_class + '</div></div>' if last_class else ''}
+  </div>
+</div>""", unsafe_allow_html=True)
 
         pending = [i for i in state.get("human_approval_queue", [])
                    if i["status"] == "pending"]
         if pending:
             st.warning(f"⚠️ {len(pending)} item(s) need your review")
 
-        st.caption(state.get("diagnosis", "")[:30])
+        diag = state.get("diagnosis", "")
+        if diag:
+            st.markdown(f'<div style="font-size:0.72rem;color:rgba(255,255,255,0.45);padding:0 0.25rem 0.5rem;line-height:1.4">{diag}</div>', unsafe_allow_html=True)
 
     st.divider()
-    if st.button("📋 Care plan", use_container_width=True):
+    st.markdown('<div style="font-size:0.65rem;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;padding:0 0.25rem">Navigation</div>', unsafe_allow_html=True)
+    if st.button("📋  Care Plan", use_container_width=True):
         st.session_state.page = "care_plan"
-    if st.button("🎤 Daily check-in", use_container_width=True):
+    if st.button("🎤  Daily Check-in", use_container_width=True):
         st.session_state.page = "checkin"
-    if st.button("📬 Approvals", use_container_width=True):
+    if st.button("📬  Approvals", use_container_width=True):
         st.session_state.page = "approvals"
-    if st.button("📊 Dashboard", use_container_width=True):
+    if st.button("📊  Dashboard", use_container_width=True):
         st.session_state.page = "dashboard"
-    if st.button("📄 Provider summary", use_container_width=True):
+    if st.button("📄  Provider Summary", use_container_width=True):
         st.session_state.page = "provider_summary"
-    if st.button("🏥 Hospital history", use_container_width=True):
+    if st.button("🏥  Hospital History", use_container_width=True):
         st.session_state.page = "hospital_history"
 
 # ── Helper to avoid duplicating monitoring logic ──────────────────────────────
@@ -164,96 +364,135 @@ def generate_provider_summary_text(state: dict) -> str:
 
 # ─── PAGE: ONBOARDING ────────────────────────────────────────────────────────
 if st.session_state.page == "onboarding" and not st.session_state.recovery_state:
-    st.title("Welcome to Nexus")
-    st.write("Let's get you set up. This takes about 3 minutes.")
+    st.markdown("""
+<div class="nexus-hero">
+  <h1>Welcome to Nexus</h1>
+  <p>Your personal recovery co-pilot — helping you stay safe, informed, and connected to your care team from the comfort of home.</p>
+  <div class="nexus-trust-row">
+    <span class="nexus-trust-item">✓ &nbsp;AI-powered daily check-ins</span>
+    <span class="nexus-trust-item">✓ &nbsp;Medication tracking</span>
+    <span class="nexus-trust-item">✓ &nbsp;Automatic care team alerts</span>
+    <span class="nexus-trust-item">✓ &nbsp;Provider-ready summaries</span>
+  </div>
+</div>""", unsafe_allow_html=True)
 
-    with st.form("onboarding_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            patient_name = st.text_input("Patient name *")
-            discharge_date = st.date_input("Discharge date *", value=None)
-        with col2:
-            caregiver_name = st.text_input("Caregiver name (optional)")
-            caregiver_email = st.text_input("Caregiver email (optional)")
+    col_form, col_info = st.columns([3, 2], gap="large")
+    with col_info:
+        st.markdown("""
+<div class="clinical-card" style="margin-top:0.25rem">
+  <div class="card-section-label">What you'll need</div>
+  <ul style="margin:0.5rem 0 0;padding-left:1.2rem;line-height:2">
+    <li>Your hospital discharge summary PDF</li>
+    <li>Your discharge date</li>
+    <li>An emergency contact (optional)</li>
+  </ul>
+</div>
+<div class="clinical-card">
+  <div class="card-section-label">How it works</div>
+  <ol style="margin:0.5rem 0 0;padding-left:1.2rem;line-height:2.1;font-size:0.92rem">
+    <li>Upload your discharge PDF — Nexus reads it automatically</li>
+    <li>Log past days if you set up late</li>
+    <li>Complete a short daily check-in each morning</li>
+    <li>Your care team is alerted if anything needs attention</li>
+  </ol>
+</div>
+<div style="font-size:0.75rem;color:#A0A0B8;margin-top:0.5rem;line-height:1.6">
+  🔒 &nbsp;Your data is encrypted and never shared without your consent.
+</div>""", unsafe_allow_html=True)
 
-        st.subheader("Emergency Contact")
-        ec_name = st.text_input("Emergency contact name")
-        ec_phone = st.text_input("Emergency contact phone")
-        ec_consent = st.checkbox(
-            "I consent to automatic emergency contact notification if a life-threatening "
-            "symptom is detected during a check-in"
-        )
+    with col_form:
+        st.markdown('<div class="card-section-label" style="margin-bottom:0.75rem">Set up your recovery plan</div>', unsafe_allow_html=True)
+        with st.form("onboarding_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                patient_name = st.text_input("Patient name *")
+                discharge_date = st.date_input("Discharge date *", value=None)
+            with col2:
+                caregiver_name = st.text_input("Caregiver name (optional)")
+                caregiver_email = st.text_input("Caregiver email (optional)")
 
-        uploaded_file = st.file_uploader(
-            "Upload your discharge summary PDF *",
-            type=["pdf"]
-        )
+            st.markdown('<div class="section-label">Emergency Contact</div>', unsafe_allow_html=True)
+            ec_col1, ec_col2 = st.columns(2)
+            with ec_col1:
+                ec_name = st.text_input("Contact name")
+            with ec_col2:
+                ec_phone = st.text_input("Contact phone")
+            ec_consent = st.checkbox(
+                "I consent to automatic emergency contact notification if a life-threatening "
+                "symptom is detected during a check-in"
+            )
 
-        submitted = st.form_submit_button("Start My Recovery Plan →")
+            st.markdown('<div class="section-label">Discharge Summary</div>', unsafe_allow_html=True)
+            uploaded_file = st.file_uploader(
+                "Upload your discharge summary PDF *",
+                type=["pdf"],
+                label_visibility="collapsed"
+            )
 
-    if submitted:
-        if not patient_name or not uploaded_file or not discharge_date:
-            st.error("Please provide your name, discharge date, and discharge summary PDF.")
-        else:
-            # Save PDF temporarily
-            patient_id = str(uuid.uuid4())[:8]
-            pdf_path = f"data/{patient_id}_discharge.pdf"
-            os.makedirs("data", exist_ok=True)
-            with open(pdf_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+            submitted = st.form_submit_button("Start My Recovery Plan →", use_container_width=True)
 
-            # Initialize state
-            initial_state = {
-                "patient_id": patient_id,
-                "patient_name": patient_name,
-                "caregiver_name": caregiver_name,
-                "caregiver_email": caregiver_email,
-                "emergency_contact_name": ec_name,
-                "emergency_contact_phone": ec_phone,
-                "emergency_contact_consented": ec_consent,
-                "discharge_date": str(discharge_date),
-                "recovery_day": 0,
-                "diagnosis": "",
-                "icd10_code": None,
-                "medications": [],
-                "appointments": [],
-                "warning_signs_er": [],
-                "warning_signs_call": [],
-                "dietary_restrictions": [],
-                "activity_restrictions": [],
-                "current_agent": "intake_agent",
-                "needs_clarification": [],
-                "active_flags": [],
-                "human_approval_queue": [],
-                "check_in_history": [],
-                "daily_vitals_log": [],
-                "hospitalization_history": [],
-                "messages": [],
-                "intake_complete": False,
-                "care_plan_complete": False,
-                "last_check_in_date": None,
-                "pinecone_namespace": f"patient_{patient_id}",
-                "pdf_path": pdf_path
-            }
-
-            with st.spinner("Reading your discharge summary... (this takes ~30 seconds)"):
-                result_state = intake_graph.invoke(initial_state)
-
-            # Clean up uploaded PDF from disk
-            if os.path.exists(pdf_path):
-                os.remove(pdf_path)
-
-            st.session_state.recovery_state = result_state
-
-            if result_state.get("intake_complete"):
-                st.success(f"✅ Recovery plan created for {patient_name}!")
-                st.session_state.history_phase = "ask"
-                st.session_state.page = "historical_checkin"
-                st.rerun()
+        if submitted:
+            if not patient_name or not uploaded_file or not discharge_date:
+                st.error("Please provide your name, discharge date, and discharge summary PDF.")
             else:
-                st.error("We had trouble reading your PDF. Please try uploading again.")
-                for flag in result_state.get("active_flags", []):
-                    st.warning(flag)
+                patient_id = str(uuid.uuid4())[:8]
+                pdf_path = f"data/{patient_id}_discharge.pdf"
+                os.makedirs("data", exist_ok=True)
+                with open(pdf_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+
+                initial_state = {
+                    "patient_id": patient_id,
+                    "patient_name": patient_name,
+                    "caregiver_name": caregiver_name,
+                    "caregiver_email": caregiver_email,
+                    "emergency_contact_name": ec_name,
+                    "emergency_contact_phone": ec_phone,
+                    "emergency_contact_consented": ec_consent,
+                    "discharge_date": str(discharge_date),
+                    "recovery_day": 0,
+                    "diagnosis": "",
+                    "icd10_code": None,
+                    "medications": [],
+                    "appointments": [],
+                    "warning_signs_er": [],
+                    "warning_signs_call": [],
+                    "dietary_restrictions": [],
+                    "activity_restrictions": [],
+                    "current_agent": "intake_agent",
+                    "needs_clarification": [],
+                    "active_flags": [],
+                    "human_approval_queue": [],
+                    "check_in_history": [],
+                    "daily_vitals_log": [],
+                    "hospitalization_history": [],
+                    "messages": [],
+                    "intake_complete": False,
+                    "care_plan_complete": False,
+                    "last_check_in_date": None,
+                    "pinecone_namespace": f"patient_{patient_id}",
+                    "pdf_path": pdf_path
+                }
+
+                with st.spinner("Reading your discharge summary… this takes about 30 seconds."):
+                    result_state = intake_graph.invoke(initial_state)
+
+                if os.path.exists(pdf_path):
+                    os.remove(pdf_path)
+
+                st.session_state.recovery_state = result_state
+
+                if result_state.get("intake_complete"):
+                    st.success(f"✅ Recovery plan created for {patient_name}!")
+                    st.session_state.history_phase = "ask"
+                    st.session_state.page = "historical_checkin"
+                    st.rerun()
+                else:
+                    st.error("We had trouble reading your PDF. Please try uploading again.")
+                    for flag in result_state.get("active_flags", []):
+                        st.warning(flag)
+
+    render_footer()
 
 # ─── PAGE: HISTORICAL CHECK-IN BACKFILL ──────────────────────────────────────
 elif st.session_state.page == "historical_checkin":
@@ -289,7 +528,7 @@ elif st.session_state.page == "historical_checkin":
 
     # ── PHASE: ask ────────────────────────────────────────────────────────────
     if phase == "ask":
-        st.title("Log Past Check-ins")
+        render_header("Recovery History", "Backfill")
         days_str = f"{len(available)} day{'s' if len(available) != 1 else ''}"
         st.write(
             f"You have **{days_str}** of recovery history available to log "
@@ -308,7 +547,7 @@ elif st.session_state.page == "historical_checkin":
 
     # ── PHASE: form ───────────────────────────────────────────────────────────
     elif phase == "form":
-        st.title("Log a Past Day")
+        render_header("Log a Past Day", "Backfill")
 
         available_dates = [d for _, d in available]
         default_date = available_dates[-1]  # default to most recent unlogged day
@@ -445,7 +684,7 @@ elif st.session_state.page == "care_plan":
     if not state:
         st.warning("Please complete onboarding first.")
     else:
-        st.title(f"Your Recovery Plan — {state.get('diagnosis')}")
+        render_header("Care Plan", state.get("diagnosis", "")[:40])
 
         # Show medication flags first if any
         pending_med_flags = [i for i in state.get("human_approval_queue", [])
@@ -540,7 +779,7 @@ elif st.session_state.page == "checkin":
             recovery_day = max(1, state.get("recovery_day", 1))
         state["recovery_day"] = recovery_day
 
-        st.title(f"Check-in — {checkin_date.strftime('%B %d, %Y')}  ·  Day {recovery_day}")
+        render_header(f"Daily Check-in", f"{checkin_date.strftime('%B %d, %Y')} · Day {recovery_day}")
 
         questions = generate_checkin_questions(state)
         responses = {}
@@ -747,7 +986,7 @@ elif st.session_state.page == "approvals":
     if not state:
         st.warning("Please complete onboarding first.")
     else:
-        st.title("📬 Items Awaiting Your Review")
+        render_header("Approvals", "Items Awaiting Review")
         pending = [i for i in state.get("human_approval_queue", [])
                    if i["status"] == "pending"]
 
@@ -789,7 +1028,7 @@ elif st.session_state.page == "dashboard":
     if not state:
         st.warning("Please complete onboarding first.")
     else:
-        st.title("📊 Recovery Dashboard")
+        render_header("Recovery Dashboard")
         history = state.get("check_in_history", [])
 
         if not history:
@@ -846,11 +1085,7 @@ elif st.session_state.page == "provider_summary":
     if not state:
         st.warning("Please complete onboarding first.")
     else:
-        st.title("Provider summary")
-        st.caption(
-            "Auto-generated from your check-in history. "
-            "Share this at your next appointment."
-        )
+        render_header("Provider Summary", "Share at your next appointment")
 
         history = state.get("check_in_history", [])
         vitals_log = state.get("daily_vitals_log", [])
@@ -955,11 +1190,7 @@ elif st.session_state.page == "hospital_history":
     if not state:
         st.warning("Please complete onboarding first.")
     else:
-        st.title("Hospital history")
-        st.caption(
-            "Your hospitalization record. The current stay was auto-imported "
-            "from your discharge summary. Add past stays manually."
-        )
+        render_header("Hospital History", "Auto-imported from discharge PDF")
 
         hosp_history = state.get("hospitalization_history", [])
 
