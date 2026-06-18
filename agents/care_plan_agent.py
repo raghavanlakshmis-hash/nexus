@@ -156,7 +156,7 @@ def run_care_plan_via_nebius(state: dict) -> str:
 
     try:
         response = nebius_client.chat.completions.create(
-            model="meta-llama/Meta-Llama-3.1-70B-Instruct",
+            model="meta-llama/Llama-3.3-70B-Instruct",
             messages=[
                 {"role": "system", "content": CARE_PLAN_SYSTEM_PROMPT},
                 {"role": "user", "content": f"Generate care plan for: {state['diagnosis']}"}
