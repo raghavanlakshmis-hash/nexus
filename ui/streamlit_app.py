@@ -3,7 +3,7 @@ import sys
 import os
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
@@ -40,6 +40,11 @@ if "page" not in st.session_state:
     st.session_state.page = "onboarding"
 if "show_typed_form" not in st.session_state:
     st.session_state.show_typed_form = False
+if "history_phase" not in st.session_state:
+    # phases: "ask" | "form" | "ask_more"
+    st.session_state.history_phase = "ask"
+if "history_selected_date" not in st.session_state:
+    st.session_state.history_selected_date = None
 
 # ─── SIDEBAR ─────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -237,12 +242,197 @@ if st.session_state.page == "onboarding" and not st.session_state.recovery_state
 
             if result_state.get("intake_complete"):
                 st.success(f"✅ Recovery plan created for {patient_name}!")
-                st.session_state.page = "care_plan"
+                st.session_state.history_phase = "ask"
+                st.session_state.page = "historical_checkin"
                 st.rerun()
             else:
                 st.error("We had trouble reading your PDF. Please try uploading again.")
                 for flag in result_state.get("active_flags", []):
                     st.warning(flag)
+
+# ─── PAGE: HISTORICAL CHECK-IN BACKFILL ──────────────────────────────────────
+elif st.session_state.page == "historical_checkin":
+    state = st.session_state.recovery_state
+    if not state:
+        st.session_state.page = "onboarding"
+        st.rerun()
+
+    discharge_str = state.get("discharge_date", "")
+    try:
+        discharge_date_obj = datetime.strptime(discharge_str, "%Y-%m-%d").date()
+    except Exception:
+        st.session_state.page = "care_plan"
+        st.rerun()
+
+    yesterday = datetime.now().date() - timedelta(days=1)
+    logged_days = {c["day"] for c in state.get("check_in_history", [])}
+
+    # Build list of (day_number, date) pairs not yet logged, from Day 1 up to yesterday
+    available = []
+    for offset in range((yesterday - discharge_date_obj).days):
+        d = discharge_date_obj + timedelta(days=offset + 1)
+        day_num = offset + 1
+        if day_num not in logged_days:
+            available.append((day_num, d))
+
+    # Nothing to backfill → skip straight to care plan
+    if not available:
+        st.session_state.page = "care_plan"
+        st.rerun()
+
+    phase = st.session_state.history_phase
+
+    # ── PHASE: ask ────────────────────────────────────────────────────────────
+    if phase == "ask":
+        st.title("Log Past Check-ins")
+        days_str = f"{len(available)} day{'s' if len(available) != 1 else ''}"
+        st.write(
+            f"You have **{days_str}** of recovery history available to log "
+            f"(from {discharge_date_obj + timedelta(days=1)} to {yesterday}). "
+            "Adding past data helps the dashboard and your provider summary be more complete."
+        )
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Yes, log a past day →", use_container_width=True):
+                st.session_state.history_phase = "form"
+                st.rerun()
+        with col2:
+            if st.button("Skip — go to my care plan", use_container_width=True):
+                st.session_state.page = "care_plan"
+                st.rerun()
+
+    # ── PHASE: form ───────────────────────────────────────────────────────────
+    elif phase == "form":
+        st.title("Log a Past Day")
+
+        available_dates = [d for _, d in available]
+        default_date = available_dates[0]
+
+        selected_date = st.date_input(
+            "Which day are you logging?",
+            value=default_date,
+            min_value=available_dates[-1] if available_dates else default_date,
+            max_value=available_dates[0] if available_dates else default_date,
+        )
+
+        # Compute day number from selected date
+        if selected_date:
+            recovery_day = (selected_date - discharge_date_obj).days
+        else:
+            recovery_day = available[0][0]
+
+        state["recovery_day"] = recovery_day
+        questions = generate_checkin_questions(state)
+        responses = {}
+
+        with st.form("history_checkin_form"):
+            st.markdown(f"**Recovery Day {recovery_day} — {selected_date}**")
+
+            st.markdown("#### 💊 Medications")
+            for q in questions:
+                if q["type"] != "med_checkbox":
+                    continue
+                responses[q["id"]] = st.radio(
+                    q.get("med_name", q["id"]),
+                    options=["Yes — I took it", "No — I missed it"],
+                    index=None,
+                    horizontal=True,
+                    key=f"hist_{recovery_day}_{q['id']}"
+                )
+
+            st.markdown("#### 📊 How were you feeling?")
+            for q in questions:
+                if q["type"] not in ("scale_1_10", "number_lbs", "yes_no_detail"):
+                    continue
+                if q["type"] == "scale_1_10":
+                    responses[q["id"]] = st.slider(
+                        q["question"], 1, 10, value=None,
+                        key=f"hist_{recovery_day}_{q['id']}"
+                    )
+                elif q["type"] == "number_lbs":
+                    responses[q["id"]] = st.number_input(
+                        q["question"], min_value=50, max_value=500,
+                        value=None, step=1, key=f"hist_{recovery_day}_{q['id']}"
+                    )
+                elif q["type"] == "yes_no_detail":
+                    col1, col2 = st.columns([1, 2])
+                    with col1:
+                        responses[q["id"]] = st.radio(
+                            q["question"], ["Yes", "No"],
+                            index=None, key=f"hist_{recovery_day}_{q['id']}"
+                        )
+                    with col2:
+                        responses[f"{q['id']}_detail"] = st.text_input(
+                            "Any details?", key=f"histd_{recovery_day}_{q['id']}"
+                        )
+
+            st.markdown("#### ⚠️ Symptoms on that day")
+            for q in questions:
+                if q["type"] not in ("symptom_checklist", "multi_select"):
+                    continue
+                st.write(q["question"])
+                selected = []
+                for i, opt in enumerate(q.get("options", [])):
+                    if st.checkbox(opt, key=f"hist_{recovery_day}_{q['id']}_{i}"):
+                        selected.append(opt)
+                responses[q["id"]] = selected
+
+            st.markdown("#### 💬 Anything else from that day?")
+            for q in questions:
+                if q["type"] != "free_text":
+                    continue
+                responses[q["id"]] = st.text_area(
+                    q["question"], key=f"hist_{recovery_day}_{q['id']}"
+                )
+
+            submitted = st.form_submit_button("Save this day →")
+
+        if submitted:
+            state["todays_checkin_responses"] = responses
+            state["checkin_method"] = "historical_typed"
+            with st.spinner("Saving..."):
+                monitoring_graph = build_monitoring_graph()
+                result_state = monitoring_graph.invoke(state)
+            st.session_state.recovery_state = result_state
+            st.session_state.history_selected_date = selected_date
+            st.session_state.history_phase = "ask_more"
+            st.rerun()
+
+    # ── PHASE: ask_more ───────────────────────────────────────────────────────
+    elif phase == "ask_more":
+        saved_date = st.session_state.history_selected_date
+        last = state.get("check_in_history", [{}])[-1]
+        icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(
+            last.get("classification", ""), "⚪"
+        )
+        st.success(f"✅ Day logged — {icon} {last.get('classification', '')}")
+        if last.get("summary"):
+            st.info(last["summary"])
+
+        # Recompute remaining available days
+        logged_days_updated = {c["day"] for c in state.get("check_in_history", [])}
+        remaining = [
+            (offset + 1, discharge_date_obj + timedelta(days=offset + 1))
+            for offset in range((yesterday - discharge_date_obj).days)
+            if (offset + 1) not in logged_days_updated
+        ]
+
+        if remaining:
+            st.write(f"**{len(remaining)} day{'s' if len(remaining) != 1 else ''} still available to log.**")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Yes, log another day →", use_container_width=True):
+                    st.session_state.history_phase = "form"
+                    st.rerun()
+            with col2:
+                if st.button("No, go to my care plan →", use_container_width=True):
+                    st.session_state.page = "care_plan"
+                    st.rerun()
+        else:
+            st.info("All past days have been logged.")
+            if st.button("Go to my care plan →", use_container_width=True):
+                st.session_state.page = "care_plan"
+                st.rerun()
 
 # ─── PAGE: CARE PLAN ─────────────────────────────────────────────────────────
 elif st.session_state.page == "care_plan":
@@ -417,37 +607,39 @@ elif st.session_state.page == "checkin":
                                         options=["Yes — I took it", "No — I missed it"],
                                         index=None,
                                         horizontal=True,
-                                        key=f"vg_{q['id']}"
+                                        key=f"vg_{recovery_day}_{q['id']}"
                                     )
                                 elif q["type"] == "scale_1_10":
                                     responses[q["id"]] = st.slider(
-                                        q["question"], 1, 10, 5, key=f"vg_{q['id']}"
+                                        q["question"], 1, 10, value=None,
+                                        key=f"vg_{recovery_day}_{q['id']}"
                                     )
                                 elif q["type"] == "number_lbs":
                                     responses[q["id"]] = st.number_input(
                                         q["question"], min_value=50, max_value=500,
-                                        value=150, step=1, key=f"vg_{q['id']}"
+                                        value=None, step=1, key=f"vg_{recovery_day}_{q['id']}"
                                     )
                                 elif q["type"] == "yes_no_detail":
                                     col1, col2 = st.columns([1, 2])
                                     with col1:
                                         responses[q["id"]] = st.radio(
-                                            q["question"], ["Yes", "No"], key=f"vg_{q['id']}"
+                                            q["question"], ["Yes", "No"],
+                                            index=None, key=f"vg_{recovery_day}_{q['id']}"
                                         )
                                     with col2:
                                         responses[f"{q['id']}_detail"] = st.text_input(
-                                            "Any details?", key=f"vgd_{q['id']}"
+                                            "Any details?", key=f"vgd_{recovery_day}_{q['id']}"
                                         )
                                 elif q["type"] in ("symptom_checklist", "multi_select"):
                                     st.write(q["question"])
                                     selected = []
                                     for i, opt in enumerate(q.get("options", [])):
-                                        if st.checkbox(opt, key=f"vg_{q['id']}_{i}"):
+                                        if st.checkbox(opt, key=f"vg_{recovery_day}_{q['id']}_{i}"):
                                             selected.append(opt)
                                     responses[q["id"]] = selected
                                 elif q["type"] == "free_text":
                                     responses[q["id"]] = st.text_area(
-                                        q["question"], key=f"vg_{q['id']}"
+                                        q["question"], key=f"vg_{recovery_day}_{q['id']}"
                                     )
                             if st.form_submit_button("Complete & Submit Check-in"):
                                 state["todays_checkin_responses"] = responses
@@ -486,7 +678,7 @@ elif st.session_state.page == "checkin":
                         options=["Yes — I took it", "No — I missed it"],
                         index=None,
                         horizontal=True,
-                        key=f"q_{q['id']}"
+                        key=f"q_{recovery_day}_{q['id']}"
                     )
 
                 st.markdown("#### 📊 How are you doing?")
@@ -495,22 +687,23 @@ elif st.session_state.page == "checkin":
                         continue
                     if q["type"] == "scale_1_10":
                         responses[q["id"]] = st.slider(
-                            q["question"], 1, 10, 5, key=f"q_{q['id']}"
+                            q["question"], 1, 10, value=None, key=f"q_{recovery_day}_{q['id']}"
                         )
                     elif q["type"] == "number_lbs":
                         responses[q["id"]] = st.number_input(
                             q["question"], min_value=50, max_value=500,
-                            value=150, step=1, key=f"q_{q['id']}"
+                            value=None, step=1, key=f"q_{recovery_day}_{q['id']}"
                         )
                     elif q["type"] == "yes_no_detail":
                         col1, col2 = st.columns([1, 2])
                         with col1:
                             responses[q["id"]] = st.radio(
-                                q["question"], ["Yes", "No"], key=f"q_{q['id']}"
+                                q["question"], ["Yes", "No"],
+                                index=None, key=f"q_{recovery_day}_{q['id']}"
                             )
                         with col2:
                             responses[f"{q['id']}_detail"] = st.text_input(
-                                "Any details?", key=f"d_{q['id']}"
+                                "Any details?", key=f"d_{recovery_day}_{q['id']}"
                             )
 
                 st.markdown("#### ⚠️ Symptom check — tick any you are experiencing right now")
@@ -520,7 +713,7 @@ elif st.session_state.page == "checkin":
                     st.write(q["question"])
                     selected = []
                     for i, opt in enumerate(q.get("options", [])):
-                        if st.checkbox(opt, key=f"q_{q['id']}_{i}"):
+                        if st.checkbox(opt, key=f"q_{recovery_day}_{q['id']}_{i}"):
                             selected.append(opt)
                     responses[q["id"]] = selected
 
@@ -528,7 +721,7 @@ elif st.session_state.page == "checkin":
                 for q in questions:
                     if q["type"] != "free_text":
                         continue
-                    responses[q["id"]] = st.text_area(q["question"], key=f"q_{q['id']}")
+                    responses[q["id"]] = st.text_area(q["question"], key=f"q_{recovery_day}_{q['id']}")
 
                 submitted = st.form_submit_button("Submit Check-in")
 
