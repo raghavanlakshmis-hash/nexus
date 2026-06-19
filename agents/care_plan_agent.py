@@ -103,7 +103,7 @@ def run_care_plan_agent(state: dict) -> dict:
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=3500,
+            max_tokens=5000,
             system=CARE_PLAN_SYSTEM_PROMPT,
             messages=[{
                 "role": "user",
