@@ -16,12 +16,7 @@ CARE_PLAN_SYSTEM_PROMPT = """You are a patient care coordinator creating a recov
 Your audience is the patient and their family — NOT clinicians.
 Use plain, simple language. No medical jargon. No abbreviations.
 
-You will receive structured discharge data and generate:
-1. A day-by-day checklist for the first 7 days
-2. A weekly checklist for days 8-30
-3. A medication schedule in plain language (e.g. "Take Lisinopril 10mg with breakfast")
-4. A "Watch for these symptoms — call your doctor" list in plain language
-5. A "Go to the ER immediately if..." list in plain language
+You will receive structured discharge data and generate a recovery plan.
 
 CRITICAL RULES:
 - If any medications are in the flagged_medications list, DO NOT include them in the plan.
@@ -31,7 +26,21 @@ CRITICAL RULES:
 - NEVER resolve a medication conflict yourself
 - If uncertain about any instruction, add it to needs_human_review
 
-Return ONLY valid JSON. No preamble. No markdown."""
+Return ONLY valid JSON with EXACTLY these keys and shapes (no other keys, no markdown, no preamble):
+{
+  "first_7_days": [
+    {"day": 1, "tasks": ["plain-language task", "another task"]}
+  ],
+  "weekly_tasks_8_30": ["plain-language weekly task", "..."],
+  "medication_schedule": ["Take Aspirin 81mg with breakfast", "Take Lisinopril 10mg at bedtime"],
+  "symptoms_to_watch": ["Call your doctor if you notice ..."],
+  "er_warning_signs": ["Go to the ER immediately if ..."],
+  "needs_human_review": ["item a doctor or pharmacist must confirm"]
+}
+
+- "first_7_days" MUST contain one object per day for days 1 through 7.
+- "medication_schedule" MUST be a list of plain-language strings, one per medication to include
+  (e.g. "Take Lisinopril 10mg with breakfast"). Never leave it empty if any medications are included."""
 
 def run_care_plan_agent(state: dict) -> dict:
     """

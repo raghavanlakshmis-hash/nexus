@@ -15,7 +15,7 @@ if os.path.isdir(_FFMPEG_BIN):
     os.environ["PATH"] = _FFMPEG_BIN + os.pathsep + os.environ.get("PATH", "")
 
 from agents.orchestrator import intake_graph, monitoring_graph, build_monitoring_graph
-from agents.monitoring_agent import generate_checkin_questions
+from agents.monitoring_agent import generate_checkin_questions, dedupe_history_by_day
 
 st.set_page_config(
     page_title="Nexus",
@@ -138,17 +138,34 @@ html, body, .stApp {
 [data-testid="stSidebar"] strong,
 [data-testid="stSidebar"] em,
 [data-testid="stSidebar"] .stMarkdown,
-[data-testid="stSidebar"] .stMarkdown * {
+[data-testid="stSidebar"] .stMarkdown *:not(.sidebar-brand-title):not(.sidebar-brand-sub) {
     color: #EDE8DA !important;
     font-size: 1rem !important;
+    font-family: 'Mulish', sans-serif !important;
+}
+/* Sidebar branding — selector must out-specify `[data-testid="stSidebar"] div` (0,1,1) */
+[data-testid="stSidebar"] .sidebar-brand-title {
+    font-size: 3.4rem !important;
+    font-weight: 700 !important;
+    color: #FBF8EF !important;
+    letter-spacing: -0.5px !important;
+    line-height: 1.05 !important;
+    font-family: 'Playfair Display', Georgia, serif !important;
+}
+[data-testid="stSidebar"] .sidebar-brand-sub {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: rgba(237,232,218,0.80) !important;
+    letter-spacing: 0.5px !important;
+    margin-top: 12px !important;
     font-family: 'Mulish', sans-serif !important;
 }
 /* Restore Material Symbols font for sidebar icon buttons (collapse/expand toggle) */
 [data-testid="stSidebar"] button span,
 [data-testid="stSidebarCollapsedControl"] span,
 [data-testid="collapsedControl"] span {
-    font-family: inherit !important;
-    font-size: inherit !important;
+    font-family: 'Material Symbols Rounded', 'Material Symbols Outlined', 'Material Icons' !important;
+    font-size: 20px !important;
     color: inherit !important;
 }
 [data-testid="stSidebar"] hr {
@@ -281,20 +298,38 @@ input[type="radio"] {
     color: var(--c-ink) !important;
     border-radius: 50% !important;
 }
-/* Selected day — aria-selected is ON the button itself, not a parent */
+/* Selected day — cover all BaseUI attribute variants + children */
 [data-baseweb="calendar"] button[aria-selected="true"],
-[data-baseweb="calendar"] button[data-selected="true"] {
+[data-baseweb="calendar"] button[data-selected="true"],
+[data-baseweb="calendar"] button[aria-selected="true"] *,
+[data-baseweb="calendar"] button[data-selected="true"] *,
+[data-baseweb="calendar"] [role="gridcell"][aria-selected="true"],
+[data-baseweb="calendar"] [role="gridcell"][aria-selected="true"] button,
+[data-baseweb="calendar"] [role="gridcell"][aria-selected="true"] * {
     background: var(--c-sage-dk) !important;
+    background-color: var(--c-sage-dk) !important;
     color: #FFFFFF !important;
+    border-color: var(--c-sage-dk) !important;
 }
 /* Today — outline ring */
 [data-baseweb="calendar"] button[aria-current="date"] {
     outline: 2px solid var(--c-sage) !important;
     outline-offset: -2px !important;
+    background: transparent !important;
+    background-color: transparent !important;
+}
+/* Today + selected */
+[data-baseweb="calendar"] button[aria-current="date"][aria-selected="true"],
+[data-baseweb="calendar"] button[aria-current="date"][data-selected="true"] {
+    background: var(--c-sage-dk) !important;
+    background-color: var(--c-sage-dk) !important;
+    color: #FFFFFF !important;
+    outline: 2px solid var(--c-sage) !important;
 }
 /* Hover */
-[data-baseweb="calendar"] button:not([aria-selected="true"]):hover {
+[data-baseweb="calendar"] button:not([aria-selected="true"]):not([data-selected="true"]):hover {
     background: var(--c-sage-lt) !important;
+    background-color: var(--c-sage-lt) !important;
 }
 /* Progress bar fill — target every nesting depth Streamlit uses */
 [data-testid="stProgressBar"] > div,
@@ -565,40 +600,60 @@ textarea {
 
 /* ── HERO / ONBOARDING BANNER — warm cream, dark ink text ────── */
 .nexus-hero {
-    background: linear-gradient(150deg, #EDE7D3 0%, #FAF7ED 70%, #FBF8EF 100%);
-    border: 1.5px solid var(--c-taupe);
+    background: linear-gradient(160deg, #F3EEDF 0%, #FBF8EF 100%);
+    border: 1px solid var(--c-taupe);
     border-radius: 20px;
-    padding: 3.25rem 2.75rem;
+    padding: 3rem 2.5rem 2.75rem;
     margin-bottom: 2.5rem;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 1px 2px rgba(43,43,38,0.04), 0 10px 34px rgba(43,43,38,0.07);
     position: relative;
     overflow: hidden;
+    text-align: center;
 }
-.nexus-hero::after {
+/* Clean accent bar across the top — replaces the off-looking right-edge gradient */
+.nexus-hero::before {
     content: '';
     position: absolute;
-    right: 0; top: 0; bottom: 0;
-    width: 5px;
-    background: linear-gradient(180deg, var(--c-sage), var(--c-clay));
-    border-radius: 0 20px 20px 0;
+    left: 0; right: 0; top: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--c-sage) 0%, var(--c-sage-dk) 55%, var(--c-clay) 100%);
+}
+.nexus-hero-title {
+    font-size: 2.85rem;
+    font-weight: 700;
+    color: #2B2B26;
+    line-height: 1.12;
+    letter-spacing: -0.5px;
+    margin: 0 0 1.05rem;
+    font-family: 'Playfair Display', Georgia, serif;
+}
+.nexus-hero-sub {
+    font-size: 1.12rem;
+    color: #5A5750;
+    line-height: 1.7;
+    margin: 0 auto;
+    max-width: 620px;
+    font-family: 'Mulish', sans-serif;
 }
 .nexus-trust-row {
     display: flex;
-    gap: 0.65rem;
-    margin-top: 1.85rem;
+    gap: 0.6rem;
+    margin-top: 2rem;
     flex-wrap: wrap;
+    justify-content: center;
 }
 .nexus-trust-item {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    font-size: 0.9rem !important;
+    font-size: 0.86rem !important;
     color: var(--c-sage-dk) !important;
     font-weight: 700;
     background: var(--c-sage-lt);
     border: 1px solid rgba(163,177,138,0.45);
     border-radius: 999px;
-    padding: 6px 14px;
+    padding: 6px 13px;
+    white-space: nowrap;
     font-family: 'Mulish', sans-serif;
 }
 
@@ -670,6 +725,11 @@ if "history_phase" not in st.session_state:
 if "history_selected_date" not in st.session_state:
     st.session_state.history_selected_date = None
 
+# Retroactively clean any duplicate same-day check-ins/vitals left over from before the
+# same-day-supersede fix, so the dashboard and provider summary read one entry per day.
+if st.session_state.recovery_state:
+    dedupe_history_by_day(st.session_state.recovery_state)
+
 # ─── PAGE HEADER COMPONENT ───────────────────────────────────────────────────
 def render_header(page_title: str, page_sub: str = ""):
     state = st.session_state.get("recovery_state")
@@ -707,9 +767,9 @@ def render_footer():
 # ─── SIDEBAR ─────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
-<div style="padding:1.5rem 0.5rem 1.5rem">
-  <div style="font-size:3.2rem;font-weight:700;color:#FBF8EF;letter-spacing:-0.5px;line-height:1.0;font-family:'Playfair Display',Georgia,serif">🌿 Nexus</div>
-  <div style="font-size:1.1rem;color:rgba(237,232,218,0.72);letter-spacing:0.4px;margin-top:10px;font-weight:500;font-family:'Mulish',sans-serif">Recovery Co-Pilot</div>
+<div style="padding:2rem 0.75rem 1.5rem">
+  <div class="sidebar-brand-title">🌿 Nexus</div>
+  <div class="sidebar-brand-sub">Recovery Co-Pilot</div>
 </div>""", unsafe_allow_html=True)
 
     if st.session_state.recovery_state:
@@ -805,7 +865,7 @@ def _run_monitoring(state):
 def generate_provider_summary_text(state: dict) -> str:
     history = state.get("check_in_history", [])
     vitals = state.get("daily_vitals_log", [])
-    meds = [m["name"] for m in state.get("medications", [])]
+    meds = [m["name"] for m in state.get("medications", []) if not m.get("interaction_flag")]
 
     lines = [
         "NEXUS — PROVIDER SUMMARY",
@@ -826,7 +886,12 @@ def generate_provider_summary_text(state: dict) -> str:
     lines += ["", "MEDICATION ADHERENCE", "-" * 20]
     for med in meds:
         taken = sum(1 for v in vitals if med in v.get("meds_taken", []))
-        lines.append(f"{med}: {taken}/{len(vitals)} days")
+        missed = sum(1 for v in vitals if med in v.get("meds_missed", []))
+        total = taken + missed
+        if total == 0:
+            lines.append(f"{med}: no check-in data yet")
+        else:
+            lines.append(f"{med}: {taken}/{total} days taken" + (f" ({missed} missed)" if missed else ""))
 
     lines += ["", "FLAGGED ANOMALIES", "-" * 20]
     for c in history:
@@ -841,8 +906,8 @@ def generate_provider_summary_text(state: dict) -> str:
 if st.session_state.page == "onboarding" and not st.session_state.recovery_state:
     st.markdown("""
 <div class="nexus-hero">
-  <div style="font-size:2.65rem;font-weight:700;color:#2B2B26;line-height:1.2;margin-bottom:0.85rem;font-family:'Playfair Display',Georgia,serif">Welcome to Nexus</div>
-  <div style="font-size:1.12rem;color:#5A5750;line-height:1.78;font-family:'Mulish',sans-serif;max-width:580px">Your personal recovery co-pilot — helping you stay safe, informed, and connected to your care team from the comfort of home.</div>
+  <div class="nexus-hero-title">Welcome to Nexus</div>
+  <div class="nexus-hero-sub">Your personal recovery co-pilot — helping you stay safe, informed, and connected to your care team from the comfort of home.</div>
   <div class="nexus-trust-row">
     <span class="nexus-trust-item">✓ &nbsp;AI-powered daily check-ins</span>
     <span class="nexus-trust-item">✓ &nbsp;Medication tracking</span>
@@ -871,19 +936,23 @@ if st.session_state.page == "onboarding" and not st.session_state.recovery_state
     <li>Your care team is alerted if anything needs attention</li>
   </ol>
 </div>
-<div style="font-size:0.9rem;color:#9A938A;margin-top:0.5rem;line-height:1.7;padding:0 0.1rem;font-family:'Mulish',sans-serif">
+<div style="font-size:0.9rem;color:#9A938A;margin-top:0.5rem;line-height:1.7;padding:0 0.1rem;font-family:'Mulish',sans-serif;text-align:center">
   🔒 &nbsp;Your data is encrypted and never shared without your consent.
 </div>""", unsafe_allow_html=True)
 
     with col_form:
         st.markdown('<div class="card-section-label" style="margin-bottom:0.85rem">Set up your recovery plan</div>', unsafe_allow_html=True)
         with st.form("onboarding_form"):
-            col1, col2 = st.columns(2)
-            with col1:
+            row1_col1, row1_col2 = st.columns(2)
+            with row1_col1:
                 patient_name = st.text_input("Patient name *")
+            with row1_col2:
                 discharge_date = st.date_input("Discharge date *", value=None)
-            with col2:
+
+            row2_col1, row2_col2 = st.columns(2)
+            with row2_col1:
                 caregiver_name = st.text_input("Caregiver name (optional)")
+            with row2_col2:
                 caregiver_email = st.text_input("Caregiver email (optional)")
 
             st.markdown('<div class="section-label">Emergency Contact</div>', unsafe_allow_html=True)
@@ -1074,16 +1143,14 @@ elif st.session_state.page == "historical_checkin":
                         value=None, step=1, key=f"hist_{recovery_day}_{q['id']}"
                     )
                 elif q["type"] == "yes_no_detail":
-                    col1, col2 = st.columns([1, 2])
-                    with col1:
-                        responses[q["id"]] = st.radio(
-                            q["question"], ["Yes", "No"],
-                            index=None, key=f"hist_{recovery_day}_{q['id']}"
-                        )
-                    with col2:
-                        responses[f"{q['id']}_detail"] = st.text_input(
-                            "Any details?", key=f"histd_{recovery_day}_{q['id']}"
-                        )
+                    responses[q["id"]] = st.radio(
+                        q["question"], ["Yes", "No"],
+                        index=None, horizontal=True,
+                        key=f"hist_{recovery_day}_{q['id']}"
+                    )
+                    responses[f"{q['id']}_detail"] = st.text_input(
+                        "Any details? (optional)", key=f"histd_{recovery_day}_{q['id']}"
+                    )
 
             st.markdown("#### ⚠️ Symptoms on that day")
             for q in questions:
@@ -1358,16 +1425,14 @@ elif st.session_state.page == "checkin":
                                         value=None, step=1, key=f"vg_{recovery_day}_{q['id']}"
                                     )
                                 elif q["type"] == "yes_no_detail":
-                                    col1, col2 = st.columns([1, 2])
-                                    with col1:
-                                        responses[q["id"]] = st.radio(
-                                            q["question"], ["Yes", "No"],
-                                            index=None, key=f"vg_{recovery_day}_{q['id']}"
-                                        )
-                                    with col2:
-                                        responses[f"{q['id']}_detail"] = st.text_input(
-                                            "Any details?", key=f"vgd_{recovery_day}_{q['id']}"
-                                        )
+                                    responses[q["id"]] = st.radio(
+                                        q["question"], ["Yes", "No"],
+                                        index=None, horizontal=True,
+                                        key=f"vg_{recovery_day}_{q['id']}"
+                                    )
+                                    responses[f"{q['id']}_detail"] = st.text_input(
+                                        "Any details? (optional)", key=f"vgd_{recovery_day}_{q['id']}"
+                                    )
                                 elif q["type"] in ("symptom_checklist", "multi_select"):
                                     st.write(q["question"])
                                     selected = []
@@ -1441,16 +1506,14 @@ elif st.session_state.page == "checkin":
                             value=None, step=1, key=f"q_{recovery_day}_{q['id']}"
                         )
                     elif q["type"] == "yes_no_detail":
-                        col1, col2 = st.columns([1, 2])
-                        with col1:
-                            responses[q["id"]] = st.radio(
-                                q["question"], ["Yes", "No"],
-                                index=None, key=f"q_{recovery_day}_{q['id']}"
-                            )
-                        with col2:
-                            responses[f"{q['id']}_detail"] = st.text_input(
-                                "Any details?", key=f"d_{recovery_day}_{q['id']}"
-                            )
+                        responses[q["id"]] = st.radio(
+                            q["question"], ["Yes", "No"],
+                            index=None, horizontal=True,
+                            key=f"q_{recovery_day}_{q['id']}"
+                        )
+                        responses[f"{q['id']}_detail"] = st.text_input(
+                            "Any details? (optional)", key=f"d_{recovery_day}_{q['id']}"
+                        )
 
                 st.markdown("#### ⚠️ Symptom check — tick any you are experiencing right now")
                 for q in questions:
@@ -1631,17 +1694,20 @@ elif st.session_state.page == "provider_summary":
                             avg_e = round(sum(energy_scores) / len(energy_scores), 1)
                             st.metric("Avg energy", f"{avg_e} / 10")
 
-            # Medication adherence
+            # Medication adherence — exclude flagged meds (never tracked, patient told to hold)
             st.subheader("Medication adherence")
-            meds = [m["name"] for m in state.get("medications", [])]
+            meds = [m["name"] for m in state.get("medications", []) if not m.get("interaction_flag")]
             if not vitals_log:
                 st.info("Medication adherence will appear here after the first check-in is submitted.")
             else:
                 for med in meds:
+                    # Count only days with an explicit answer — a med with no answer is not "missed"
                     taken = sum(1 for v in vitals_log if med in v.get("meds_taken", []))
-                    total = len(vitals_log)
-                    missed = total - taken
-                    if missed == 0:
+                    missed = sum(1 for v in vitals_log if med in v.get("meds_missed", []))
+                    total = taken + missed
+                    if total == 0:
+                        st.info(f"ℹ️ {med} — no check-in data yet")
+                    elif missed == 0:
                         st.success(f"✅ {med} — {taken}/{total} days (perfect)")
                     else:
                         pct = int(taken / total * 100)
@@ -1735,23 +1801,37 @@ elif st.session_state.page == "hospital_history":
         with st.form("add_hospitalization"):
             col1, col2 = st.columns(2)
             with col1:
-                admit = st.text_input("Admission date (YYYY-MM-DD)")
+                admit = st.date_input(
+                    "Admission date",
+                    value=None,
+                    min_value=datetime(1900, 1, 1).date(),
+                    max_value=datetime.now().date(),
+                    key="hist_admit_date",
+                )
                 hospital = st.text_input("Hospital name")
                 diagnosis = st.text_input("Main diagnosis")
             with col2:
-                discharge = st.text_input("Discharge date (YYYY-MM-DD)")
+                discharge = st.date_input(
+                    "Discharge date",
+                    value=None,
+                    min_value=datetime(1900, 1, 1).date(),
+                    max_value=datetime.now().date(),
+                    key="hist_discharge_date",
+                )
                 physician = st.text_input("Treating physician (optional)")
                 icd10 = st.text_input("ICD-10 code (optional)")
 
             notes = st.text_area("Any notes (procedures, reason for admission, etc.)", height=80)
             submitted = st.form_submit_button("Add hospitalization")
 
-        if submitted and admit and discharge and diagnosis:
+        if submitted and admit and discharge and diagnosis and discharge < admit:
+            st.error("Discharge date cannot be before the admission date.")
+        elif submitted and admit and discharge and diagnosis:
             import uuid as uuid_lib
             new_record = {
                 "id": str(uuid_lib.uuid4()),
-                "admit_date": admit,
-                "discharge_date": discharge,
+                "admit_date": admit.isoformat(),
+                "discharge_date": discharge.isoformat(),
                 "hospital_name": hospital,
                 "diagnosis": diagnosis,
                 "icd10_code": icd10 or None,

@@ -14,3 +14,16 @@ data/convert.py
 data/create_test_pdf.py
 *~touch
 ~$*
+
+# Doc / diagram generator scripts — not part of the deployed app
+update_docs*.py
+add_architecture.py
+
+# Stale backup copy of the app
+ui/streamlit_app1.py
+
+# Test-data generator scripts (keep the demo PDFs below, not the scripts)
+data/*.py
+
+# Keep the demo discharge PDFs for graders — overrides the global *.pdf ignore above
+!data/*.pdf

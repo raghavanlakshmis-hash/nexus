@@ -33,6 +33,34 @@ Return ONLY valid JSON:
   "escalation_reason": "only if RED — specific reason"
 }"""
 
+def dedupe_history_by_day(state: dict) -> dict:
+    """Keep only the most recent check-in (and vitals) per recovery day.
+
+    Retroactively cleans duplicate same-day entries that may have accumulated before
+    the same-day-supersede fix. 'Most recent' = latest timestamp for check-ins, and
+    last-logged for vitals. Safe to call on every render — it is a no-op when there
+    are no duplicates. Results are re-sorted by day so the dashboard reads in order.
+    """
+    history = state.get("check_in_history", [])
+    if history:
+        by_day = {}
+        for rec in history:
+            day = rec.get("day")
+            existing = by_day.get(day)
+            if existing is None or rec.get("timestamp", "") >= existing.get("timestamp", ""):
+                by_day[day] = rec
+        state["check_in_history"] = [by_day[d] for d in sorted(by_day, key=lambda d: (d is None, d))]
+
+    vitals = state.get("daily_vitals_log", [])
+    if vitals:
+        v_by_day = {}
+        for rec in vitals:
+            v_by_day[rec.get("day")] = rec  # later entry wins (insertion order = chronological)
+        state["daily_vitals_log"] = [v_by_day[d] for d in sorted(v_by_day, key=lambda d: (d is None, d))]
+
+    return state
+
+
 def generate_checkin_questions(state: dict) -> list:
     """Generate personalized check-in questions based on diagnosis and day."""
     diagnosis = state.get("diagnosis", "general").lower()
@@ -99,8 +127,14 @@ def run_monitoring_agent(state: dict, check_in_responses: dict) -> dict:
     client = Anthropic()
     print(f"[Monitoring Agent] Processing Day {state['recovery_day']} check-in...")
 
+    # Drop any prior check-in for today — a re-submission supersedes it. Keeping it would make
+    # the classifier compare two same-day check-ins and flag a false "data discrepancy".
+    state["check_in_history"] = [
+        c for c in state.get("check_in_history", []) if c.get("day") != state["recovery_day"]
+    ]
+
     # Retrieve recent history for trend analysis
-    history = state.get("check_in_history", [])
+    history = state["check_in_history"]
     recent_history = history[-7:] if len(history) > 7 else history
 
     try:
@@ -184,7 +218,8 @@ def run_monitoring_agent(state: dict, check_in_responses: dict) -> dict:
     ]
     state["daily_vitals_log"].append(vitals_record)
 
-    # Update state
+    # Update state — any prior same-day check-in was already removed above, so this
+    # append replaces rather than duplicates when re-submitting for the same day.
     state["check_in_history"].append(check_in_record)
     state["last_check_in_date"] = datetime.now().isoformat()
 
