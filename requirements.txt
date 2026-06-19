@@ -11,9 +11,9 @@ streamlit
 anthropic
 openai
 
-# Agent orchestration — pinned together (API-sensitive, pure-Python, installs on any Python)
-langgraph==0.0.8
-langchain-core==0.1.53
+# Agent orchestration — pin to the 1.x line that matches local (StateGraph lives in
+# langgraph.graph here). langgraph pulls its own compatible langchain-core/checkpoint.
+langgraph>=1.2.5,<2
 
 # Vector store (v5 API: `from pinecone import Pinecone`)
 pinecone-client>=5,<6
